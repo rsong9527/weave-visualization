@@ -5,6 +5,7 @@ __pycache__/
 *.so
 .Python
 *.egg-info/
+*.egg
 dist/
 build/
 
@@ -12,6 +13,9 @@ build/
 venv/
 env/
 .env
+
+# microbot data
+.microbot/
 
 # W&B
 wandb/
@@ -25,4 +29,3 @@ wandb/
 # OS
 .DS_Store
 Thumbs.db
-
