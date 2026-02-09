@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>リーガルレビュー | Legal Review System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=Noto+Serif+JP:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <span class="logo-icon">⚖️</span>
+                <div class="logo-text">
+                    <h1>リーガルレビュー</h1>
+                    <p class="logo-subtitle">AI法務文書レビューシステム</p>
+                </div>
+            </div>
+            <div class="header-badge">
+                <span class="badge-dot"></span>
+                <span>Powered by Claude</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- Left Panel: Input -->
+        <section class="panel input-panel">
+            <div class="panel-header">
+                <h2>📝 レビュー依頼</h2>
+            </div>
+
+            <div class="panel-body">
+                <!-- Review Type Selection -->
+                <div class="form-group">
+                    <label class="form-label">レビュータイプ</label>
+                    <div class="review-type-grid">
+                        {% for key, config in review_types.items() %}
+                        <button class="review-type-btn {% if loop.first %}active{% endif %}"
+                                data-type="{{ key }}"
+                                title="{{ config.description }}">
+                            <span class="type-icon">{{ config.icon }}</span>
+                            <span class="type-name">{{ config.name }}</span>
+                        </button>
+                        {% endfor %}
+                    </div>
+                    <p class="type-description" id="typeDescription">
+                        {{ review_types[review_types.keys()|list|first].description }}
+                    </p>
+                </div>
+
+                <!-- Document Input -->
+                <div class="form-group flex-grow">
+                    <label class="form-label">
+                        レビュー対象文書
+                        <span class="char-count" id="charCount">0 文字</span>
+                    </label>
+                    <textarea
+                        id="documentInput"
+                        class="document-textarea"
+                        placeholder="ここに契約書や法務文書のテキストを貼り付けてください...&#10;&#10;例：&#10;第1条（目的）&#10;本契約は、甲が乙に対して..."></textarea>
+                </div>
+
+                <!-- Additional Context -->
+                <div class="form-group">
+                    <label class="form-label">補足情報・特記事項（任意）</label>
+                    <textarea
+                        id="contextInput"
+                        class="context-textarea"
+                        placeholder="特に確認してほしい点や背景情報があれば記入してください..."></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="form-actions">
+                    <button id="submitBtn" class="submit-btn" onclick="submitReview()">
+                        <span class="btn-icon">🔍</span>
+                        <span class="btn-text">レビューを開始</span>
+                    </button>
+                    <button id="clearBtn" class="clear-btn" onclick="clearAll()">
+                        クリア
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Output -->
+        <section class="panel output-panel">
+            <div class="panel-header">
+                <h2>📊 レビュー結果</h2>
+                <div class="panel-actions">
+                    <button class="icon-btn" onclick="copyResult()" title="結果をコピー" id="copyBtn" disabled>
+                        📋 コピー
+                    </button>
+                    <button class="icon-btn" onclick="downloadResult()" title="結果をダウンロード" id="downloadBtn" disabled>
+                        💾 保存
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel-body">
+                <!-- Placeholder -->
+                <div id="placeholder" class="result-placeholder">
+                    <div class="placeholder-icon">⚖️</div>
+                    <h3>レビュー結果がここに表示されます</h3>
+                    <p>左側のパネルに文書を入力し、<br>「レビューを開始」ボタンをクリックしてください</p>
+                    <div class="placeholder-features">
+                        <div class="feature-item">
+                            <span>📄</span>
+                            <span>契約書レビュー</span>
+                        </div>
+                        <div class="feature-item">
+                            <span>✅</span>
+                            <span>コンプライアンス</span>
+                        </div>
+                        <div class="feature-item">
+                            <span>⚠️</span>
+                            <span>リスク分析</span>
+                        </div>
+                        <div class="feature-item">
+                            <span>🔒</span>
+                            <span>NDAレビュー</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loading" class="loading-state" style="display: none;">
+                    <div class="loading-animation">
+                        <div class="loading-bar"></div>
+                        <div class="loading-bar"></div>
+                        <div class="loading-bar"></div>
+                    </div>
+                    <p class="loading-text">Claude がレビュー中です...</p>
+                    <p class="loading-subtext">法的観点から文書を分析しています</p>
+                </div>
+
+                <!-- Result Content -->
+                <div id="resultContent" class="result-content" style="display: none;"></div>
+
+                <!-- Error State -->
+                <div id="errorState" class="error-state" style="display: none;">
+                    <div class="error-icon">❌</div>
+                    <p class="error-message" id="errorMessage"></p>
+                    <button class="retry-btn" onclick="submitReview()">再試行</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <p class="disclaimer">
+                ⚠️ 本システムの出力は参考情報であり、正式な法的助言ではありません。
+                重要な法的判断については、必ず弁護士等の専門家にご相談ください。
+            </p>
+            <p class="copyright">
+                Legal Review System &copy; 2026 | Powered by Anthropic Claude API
+            </p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
