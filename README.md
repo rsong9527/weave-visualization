@@ -78,3 +78,4 @@ To display Evaluation charts in W&B Workspace:
 ## Design Notes
 
 - [On-Prem K8s Support Copilot](docs/on-prem-k8s-support-copilot.md)
+- [SA Welcome: Local Deploy](docs/sa-welcome-local-deploy.md)
