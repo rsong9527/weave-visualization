@@ -1,0 +1,16 @@
+{
+  "task_type": "config_fix",
+  "user_question": "After upgrading our ingress-nginx Helm release, the ingress controller pods are OOMKilled. Need help fixing the resource configuration.",
+  "pods_overview": "NAMESPACE       NAME                                        READY   STATUS      RESTARTS       AGE    IP            NODE          NOMINATED NODE   READINESS GATES\ningress-nginx   ingress-nginx-controller-7f4b8d9c6-m2kj9    0/1     OOMKilled   3 (45s ago)    5m     10.244.1.20   worker-01     <none>           <none>\ningress-nginx   ingress-nginx-controller-7f4b8d9c6-p9x2f    0/1     OOMKilled   2 (60s ago)    5m     10.244.2.21   worker-02     <none>           <none>\nkube-system     coredns-5d78c9869d-4xz7p                    1/1     Running     0              10d    10.244.0.3    control-01    <none>           <none>",
+  "cluster_info": "Client Version: v1.29.1\nServer Version: v1.29.1\nKubernetes control plane is running at https://10.0.0.100:6443",
+  "pod_describe": "Name:             ingress-nginx-controller-7f4b8d9c6-m2kj9\nNamespace:        ingress-nginx\nNode:             worker-01/10.0.0.11\nLabels:           app.kubernetes.io/instance=ingress-nginx\n                  app.kubernetes.io/name=ingress-nginx\nStatus:           Running\nContainers:\n  controller:\n    Image:          registry.k8s.io/ingress-nginx/controller:v1.9.5\n    State:          Waiting\n      Reason:       CrashLoopBackOff\n    Last State:     Terminated\n      Reason:       OOMKilled\n      Exit Code:    137\n    Limits:\n      cpu:     100m\n      memory:  90Mi\n    Requests:\n      cpu:     50m\n      memory:  64Mi\nEvents:\n  Type     Reason     Age   From     Message\n  Warning  OOMKilled  45s   kubelet  Container controller exceeded memory limit",
+  "helm_list": "NAME            NAMESPACE       REVISION    UPDATED                                 STATUS      CHART                       APP VERSION\ningress-nginx   ingress-nginx   3           2026-02-09 07:00:00.000000 +0000 UTC    deployed    ingress-nginx-4.9.0         1.9.5",
+  "helm_status": "NAME: ingress-nginx\nLAST DEPLOYED: Mon Feb  9 07:00:00 2026\nNAMESPACE: ingress-nginx\nSTATUS: deployed\nREVISION: 3",
+  "values_yaml": "controller:\n  replicaCount: 2\n  resources:\n    limits:\n      cpu: 100m\n      memory: 90Mi\n    requests:\n      cpu: 50m\n      memory: 64Mi\n  service:\n    type: NodePort\n    nodePorts:\n      http: 30080\n      https: 30443",
+  "cluster_metadata": {
+    "k8s_version": "v1.29.1",
+    "cri": "containerd 1.7.13",
+    "cni": "flannel 0.24.0",
+    "os": "Rocky Linux 9.3"
+  }
+}

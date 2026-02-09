@@ -1,0 +1,17 @@
+{
+  "task_type": "install",
+  "user_question": "I need to install cert-manager in our air-gapped cluster for TLS certificate management.",
+  "component_name": "cert-manager",
+  "target_namespace": "cert-manager",
+  "pods_overview": "NAMESPACE     NAME                                READY   STATUS    RESTARTS   AGE    IP            NODE          NOMINATED NODE   READINESS GATES\nkube-system   coredns-5d78c9869d-4xz7p            1/1     Running   0          30d    10.244.0.3    control-01    <none>           <none>\nkube-system   coredns-5d78c9869d-8mk2p            1/1     Running   0          30d    10.244.0.4    control-01    <none>           <none>\nkube-system   kube-proxy-abc12                     1/1     Running   0          30d    192.168.1.10  worker-01     <none>           <none>\nkube-system   kube-proxy-def34                     1/1     Running   0          30d    192.168.1.11  worker-02     <none>           <none>",
+  "cluster_info": "Client Version: v1.28.4\nServer Version: v1.28.4\nKubernetes control plane is running at https://192.168.1.100:6443",
+  "node_info": "NAME         STATUS   ROLES           AGE   VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION     CONTAINER-RUNTIME\ncontrol-01   Ready    control-plane   30d   v1.28.4   192.168.1.100  <none>        Ubuntu 22.04.3 LTS   5.15.0-91-generic  containerd://1.7.11\nworker-01    Ready    <none>          30d   v1.28.4   192.168.1.10   <none>        Ubuntu 22.04.3 LTS   5.15.0-91-generic  containerd://1.7.11\nworker-02    Ready    <none>          30d   v1.28.4   192.168.1.11   <none>        Ubuntu 22.04.3 LTS   5.15.0-91-generic  containerd://1.7.11",
+  "storage_info": "NAME                          PROVISIONER          RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE\nstorageclass/local-path       rancher.io/local-path Delete          WaitForFirstConsumer false                  30d",
+  "cluster_metadata": {
+    "k8s_version": "v1.28.4",
+    "cri": "containerd 1.7.11",
+    "cni": "calico 3.26",
+    "storage_class": "local-path",
+    "os": "Ubuntu 22.04"
+  }
+}
