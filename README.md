@@ -74,3 +74,7 @@ To display Evaluation charts in W&B Workspace:
 - [Weave Evaluation Docs](https://weave-docs.wandb.ai/guides/core-types/evaluations)
 - [W&B Custom Charts](https://docs.wandb.ai/guides/app/features/custom-charts)
 - [Weave Trace Plots (Beta)](https://app.getbeamer.com/wandb/en/create-custom-dashboards-using-trace-plots)
+
+## Design Notes
+
+- [On-Prem K8s Support Copilot](docs/on-prem-k8s-support-copilot.md)
