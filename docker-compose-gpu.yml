@@ -1,0 +1,37 @@
+# vits-simple-api Docker Compose (GPU 版本)
+# 前提条件:
+#   - NVIDIA GPU + 驱动已安装
+#   - nvidia-container-toolkit 已安装
+# 使用方法:
+#   1. mkdir -p data/models  (放入你的语音模型)
+#   2. docker-compose -f docker-compose-gpu.yml up -d
+#   3. 访问 http://localhost:23456
+
+version: '3.8'
+
+services:
+  vits-simple-api:
+    image: artrajz/vits-simple-api:latest-gpu
+    container_name: vits-simple-api-gpu
+    restart: always
+    ports:
+      - "23456:23456"
+    environment:
+      LANG: 'C.UTF-8'
+      TZ: Asia/Shanghai
+    command: ["python", "app.py"]
+    volumes:
+      - ./data:/app/data               # 模型和数据目录
+      - ./logs:/app/logs                # 日志目录
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:23456/voice/speakers"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
