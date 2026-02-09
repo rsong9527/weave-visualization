@@ -1,0 +1,5 @@
+run_id,map_name,ticks,total_time_s,entity_count,mod_count,label,build
+baseline-1,train_grid,10000,5.00,120000,12,baseline,1.1.100
+candidate-1,train_grid,10000,5.30,120000,12,candidate,1.1.100+pr42
+baseline-2,mega_base,10000,8.20,350000,22,baseline,1.1.100
+candidate-2,mega_base,10000,7.90,350000,22,candidate,1.1.100+pr42
