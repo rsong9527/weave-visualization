@@ -1,0 +1,22 @@
+# PostTrainBench Reproduction - Dependencies
+# For GPU training (H100/A100 recommended)
+
+# Core ML
+torch>=2.1.0
+transformers>=4.45.0
+datasets>=2.20.0
+accelerate>=0.30.0
+
+# LoRA / PEFT
+peft>=0.12.0
+trl>=0.9.0
+
+# Quantization (optional, for QLoRA)
+bitsandbytes>=0.43.0
+
+# Inference (optional, for faster evaluation)
+# vllm>=0.5.0
+
+# Utilities
+pandas>=2.0.0
+scikit-learn>=1.3.0

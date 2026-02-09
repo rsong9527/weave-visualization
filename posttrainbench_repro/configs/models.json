@@ -1,0 +1,48 @@
+{
+    "models": [
+        {
+            "name": "Qwen3-1.7B",
+            "hf_id": "Qwen/Qwen3-1.7B",
+            "type": "causal_lm",
+            "params": "1.7B",
+            "notes": "Smallest Qwen3 model, good for quick iteration"
+        },
+        {
+            "name": "Qwen3-4B",
+            "hf_id": "Qwen/Qwen3-4B",
+            "type": "causal_lm",
+            "params": "4B",
+            "notes": "Medium Qwen3 model"
+        },
+        {
+            "name": "SmolLM3-3B",
+            "hf_id": "HuggingFaceTB/SmolLM3-3B",
+            "type": "causal_lm",
+            "params": "3B",
+            "notes": "HuggingFace small language model"
+        },
+        {
+            "name": "Gemma-3-4B",
+            "hf_id": "google/gemma-3-4b",
+            "type": "causal_lm",
+            "params": "4B",
+            "notes": "Google's Gemma 3 base model (requires HF token with access)"
+        }
+    ],
+    "lightweight_models": [
+        {
+            "name": "Qwen2.5-0.5B",
+            "hf_id": "Qwen/Qwen2.5-0.5B",
+            "type": "causal_lm",
+            "params": "0.5B",
+            "notes": "Very small model for CPU/low-GPU testing"
+        },
+        {
+            "name": "SmolLM2-135M",
+            "hf_id": "HuggingFaceTB/SmolLM2-135M",
+            "type": "causal_lm",
+            "params": "135M",
+            "notes": "Tiny model for CPU demo"
+        }
+    ]
+}
