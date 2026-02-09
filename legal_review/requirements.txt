@@ -1,0 +1,3 @@
+# Legal Review System Dependencies
+flask>=3.0.0
+anthropic>=0.40.0
