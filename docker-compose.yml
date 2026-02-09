@@ -1,0 +1,29 @@
+# vits-simple-api Docker Compose (CPU 版本)
+# 使用方法:
+#   1. mkdir -p data/models  (放入你的语音模型)
+#   2. docker-compose up -d
+#   3. 访问 http://localhost:23456
+
+version: '3.8'
+
+services:
+  vits-simple-api:
+    image: artrajz/vits-simple-api:latest
+    container_name: vits-simple-api
+    restart: always
+    ports:
+      - "23456:23456"
+    environment:
+      LANG: 'C.UTF-8'
+      TZ: Asia/Shanghai
+    # 开发/调试时用 python app.py（单进程），生产环境用 gunicorn
+    command: ["python", "app.py"]
+    volumes:
+      - ./data:/app/data               # 模型和数据目录
+      - ./logs:/app/logs                # 日志目录
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:23456/voice/speakers"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s

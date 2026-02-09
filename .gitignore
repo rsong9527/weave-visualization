@@ -26,3 +26,12 @@ wandb/
 .DS_Store
 Thumbs.db
 
+# vits-simple-api
+data/
+logs/
+config.yaml
+*.wav
+*.mp3
+*.ogg
+*.flac
+vits-simple-api/
