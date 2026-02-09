@@ -1,0 +1,49 @@
+{
+    "benchmarks": [
+        {
+            "name": "GSM8K",
+            "id": "gsm8k",
+            "description": "Grade school math problems - tests mathematical reasoning",
+            "dataset": "openai/gsm8k",
+            "split": "test",
+            "metric": "accuracy",
+            "difficulty": "medium"
+        },
+        {
+            "name": "HumanEval",
+            "id": "humaneval",
+            "description": "Python code generation - tests coding ability",
+            "dataset": "openai/openai_humaneval",
+            "split": "test",
+            "metric": "pass@1",
+            "difficulty": "medium"
+        },
+        {
+            "name": "GPQA Main",
+            "id": "gpqamain",
+            "description": "Graduate-level QA across STEM domains",
+            "dataset": "Idavidrein/gpqa",
+            "split": "gpqa_main",
+            "metric": "accuracy",
+            "difficulty": "hard"
+        },
+        {
+            "name": "BFCL",
+            "id": "bfcl",
+            "description": "Berkeley Function Calling Leaderboard - tests tool use",
+            "dataset": "gorilla-llm/Berkeley-Function-Calling-Leaderboard",
+            "split": "test",
+            "metric": "accuracy",
+            "difficulty": "hard"
+        },
+        {
+            "name": "AIME 2025",
+            "id": "aime2025",
+            "description": "American Invitational Mathematics Examination - very hard math",
+            "dataset": "aime2025",
+            "split": "test",
+            "metric": "accuracy",
+            "difficulty": "very_hard"
+        }
+    ]
+}

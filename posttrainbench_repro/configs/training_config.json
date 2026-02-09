@@ -1,0 +1,79 @@
+{
+    "sft_config": {
+        "description": "Supervised Fine-Tuning configuration",
+        "lora": {
+            "r": 64,
+            "lora_alpha": 128,
+            "lora_dropout": 0.05,
+            "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+            "task_type": "CAUSAL_LM"
+        },
+        "training": {
+            "num_train_epochs": 3,
+            "per_device_train_batch_size": 4,
+            "gradient_accumulation_steps": 4,
+            "learning_rate": 2e-4,
+            "warmup_ratio": 0.1,
+            "weight_decay": 0.01,
+            "max_seq_length": 2048,
+            "fp16": false,
+            "bf16": true,
+            "logging_steps": 10,
+            "save_strategy": "epoch",
+            "optim": "adamw_torch",
+            "lr_scheduler_type": "cosine"
+        }
+    },
+    "sft_config_lightweight": {
+        "description": "Lightweight SFT config for CPU/small GPU testing",
+        "lora": {
+            "r": 16,
+            "lora_alpha": 32,
+            "lora_dropout": 0.1,
+            "target_modules": ["q_proj", "v_proj"],
+            "task_type": "CAUSAL_LM"
+        },
+        "training": {
+            "num_train_epochs": 1,
+            "per_device_train_batch_size": 1,
+            "gradient_accumulation_steps": 8,
+            "learning_rate": 5e-4,
+            "warmup_ratio": 0.1,
+            "weight_decay": 0.01,
+            "max_seq_length": 512,
+            "fp16": false,
+            "bf16": false,
+            "logging_steps": 5,
+            "save_strategy": "epoch",
+            "optim": "adamw_torch",
+            "lr_scheduler_type": "cosine",
+            "max_steps": 50
+        }
+    },
+    "dataset_configs": {
+        "gsm8k": {
+            "train_datasets": [
+                "openai/gsm8k:train",
+                "meta-math/MetaMathQA"
+            ],
+            "format": "math_reasoning",
+            "description": "Math reasoning training data"
+        },
+        "humaneval": {
+            "train_datasets": [
+                "iamtarun/python_code_instructions_18k_alpaca",
+                "sahil2801/CodeAlpaca-20k"
+            ],
+            "format": "code_generation",
+            "description": "Code generation training data"
+        },
+        "general": {
+            "train_datasets": [
+                "Open-Orca/SlimOrca",
+                "teknium/OpenHermes-2.5"
+            ],
+            "format": "instruction_following",
+            "description": "General instruction-following data"
+        }
+    }
+}

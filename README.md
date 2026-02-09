@@ -69,8 +69,27 @@ To display Evaluation charts in W&B Workspace:
 3. Choose data source (logged tables)
 4. Configure chart type and field mapping
 
+## PostTrainBench Reproduction
+
+This repo also includes a reproduction of [PostTrainBench](https://posttrainbench.com/) - a benchmark measuring how well AI agents can post-train base LLMs.
+
+See [`posttrainbench_repro/`](posttrainbench_repro/) for the full reproduction with:
+- SFT + LoRA post-training scripts for Qwen3, SmolLM3, Gemma 3 models
+- Evaluation on GSM8K and HumanEval benchmarks
+- Both CPU demo and full GPU (H100) modes
+
+```bash
+# Quick demo (CPU, ~10 min)
+cd posttrainbench_repro && bash scripts/quick_demo.sh
+
+# Full run (GPU)
+cd posttrainbench_repro && bash scripts/run_gpu.sh
+```
+
 ## Reference Documentation
 
 - [Weave Evaluation Docs](https://weave-docs.wandb.ai/guides/core-types/evaluations)
 - [W&B Custom Charts](https://docs.wandb.ai/guides/app/features/custom-charts)
 - [Weave Trace Plots (Beta)](https://app.getbeamer.com/wandb/en/create-custom-dashboards-using-trace-plots)
+- [PostTrainBench](https://posttrainbench.com/)
+- [PostTrainBench GitHub](https://github.com/aisa-group/PostTrainBench)
