@@ -26,3 +26,7 @@ wandb/
 .DS_Store
 Thumbs.db
 
+# llama.cpp pipeline
+llama_pipeline/models/*.gguf
+llama_pipeline/data/vectors.db
+llama_pipeline/data/runs/
