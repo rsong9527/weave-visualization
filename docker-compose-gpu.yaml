@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  vits:
+    image: artrajz/vits-simple-api:latest-gpu
+    restart: always
+    ports:
+      - 23456:23456
+    environment:
+      LANG: 'C.UTF-8'
+      TZ: Asia/Shanghai # timezone
+    command: [ 'python', 'app.py' ]
+    #    command: ["gunicorn", "-c", "gunicorn_config.py", "app:app"]
+    volumes:
+      - ./data:/app/data # model data folder
+      - ./config.yaml:/app/config.yaml # service configuration
+      - ./logs:/app/logs # logging logs
+      - ./gunicorn_config.py:/app/gunicorn_config.py # gunicorn configuration
+      - ./pyopenjtalk/open_jtalk_dic_utf_8-1.11:/usr/local/lib/python3.10/site-packages/pyopenjtalk/open_jtalk_dic_utf_8-1.11 #pyopentjalk
+      - ./nltk_data:/usr/local/share/nltk_data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              #device_ids: ['0', '3']
+              capabilities: [ gpu ]

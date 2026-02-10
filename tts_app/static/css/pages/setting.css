@@ -1,0 +1,55 @@
+.setting-content {
+    background-color: #e3fde3;
+    border-radius: 8px;
+    overflow-y: auto;
+
+}
+
+.configuration {
+    margin: 20px;
+}
+
+.config-wrapper {
+    padding: 20px;
+    margin-bottom: 20px;
+    border: solid white;
+    border-radius: 15px;
+    background-color: white;
+
+}
+
+.config-wrapper .title {
+    padding: 0.375rem 0.75rem;
+    font-size: 1.5rem;
+}
+
+#addModelRow {
+    width: max-content;
+    padding: 8px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    color: white;
+    background-color: #b9d1f5;
+    cursor: pointer;
+}
+
+#addModelRow:hover {
+    background-color: gainsboro;
+}
+
+.config-save {
+    width: max-content;
+    padding: 8px;
+    border-radius: 5px;
+    color: white;
+    background-color: #62478c;
+    cursor: pointer;
+}
+
+.config-save:hover {
+    background-color: #673ab7;
+}
+
+
+
+

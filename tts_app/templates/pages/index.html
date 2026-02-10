@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>vits-simple-api</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/plugins/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fileinput.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/index.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/plugins/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/plugins/select2-bootstrap-5-theme.min.css') }}">
+</head>
+<body>
+<main class="main-container">
+    <div class="container flex flex-wrap mx-auto">
+        <div class="text-center d-flex align-items-center w-100" style="height: 100px;" id="component-1">
+            <h1 class="w-100">
+                <a href="https://github.com/Artrajz/vits-simple-api" target="_blank"
+                   style="text-decoration: none; color: black"> vits-simple-api</a>
+            </h1>
+        </div>
+
+        <div class="tabs w-100 border-b-2" id="component-2">
+            <button class="tab-button px-4 pb-2 pt-2" onclick="showContent(0)" id="vits-button">VITS</button>
+            <button class="tab-button px-4 pb-2 pt-2" onclick="showContent(1)" id="w2v2-vits-button">W2V2-VITS</button>
+            <button class="tab-button px-4 pb-2 pt-2" onclick="showContent(2)" id="bert-vits2-button">Bert-VITS2
+            </button>
+            <button class="tab-button px-4 pb-2 pt-2" onclick="showContent(3)" id="gpt-sovits-button">GPT-SoVITS
+            </button>
+        </div>
+
+        <div class="content w-100 border-lr-2 border-b-2" id="component-3">
+            {% block vits %}
+                {% include 'pages/vits.html' %}
+            {% endblock vits %}
+
+            {% block w2v2_vits %}
+                {% include 'pages/w2v2_vits.html' %}
+            {% endblock w2v2_vits %}
+
+            {% block bert_vits2 %}
+                {% include 'pages/bert_vits2.html' %}
+            {% endblock bert_vits2 %}
+            {% block gpt_sovits %}
+                {% include 'pages/gpt_sovits.html' %}
+            {% endblock gpt_sovits %}
+        </div>
+        <div>
+            <div class="mt-2">
+                {% if speakers_count == 0 %}
+                    <div style="color: red;">未加载任何模型</div>
+                {% endif %}
+                <div>
+                    <label>返回speakers(json)：</label>
+                    <a id="speakers_link" href="https://artrajz-vits-simple-api.hf.space/voice/speakers" target="_blank"
+                       style="text-decoration: none; color: black">
+                        https://artrajz-vits-simple-api.hf.space/voice/speakers
+                    </a>
+                </div>
+                <div>
+                    <label>API调用：</label>
+                    <a id="vits_link"
+                       href="https://artrajz-vits-simple-api.hf.space/voice/vits?text=你好,こんにちは&id=164"
+                       style="text-decoration: none; color: black">
+                        https://artrajz-vits-simple-api.hf.space/voice/vits?text=你好,こんにちは&id=164
+                    </a>
+                </div>
+            </div>
+        </div>
+        <br/>
+
+    </div>
+</main>
+
+<div class="floating-icon" id="apiKeyIcon">
+    <label data-toggle="tooltip" data-placement="left" data-bs-original-title="api_key">
+            <span class="settings-icon"><svg xmlns="http://www.w3.org/2000/svg" width="13px"
+                                             height="13px" viewBox="0 0 24 24" fill="none"
+                                             stroke="currentColor" stroke-width="2"
+                                             stroke-linecap="round" stroke-linejoin="round"
+                                             class="feather feather-settings" data-original-title=""
+                                             title=""><circle cx="12" cy="12" r="3"></circle><path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
+    </label>
+    <div class="api-key-input" id="apiKeyInput">
+        <div class="input-group-prepend">
+            <span class="input-group-text">API Key</span>
+        </div>
+        <input type="text" class="form-control" id="apiKey" placeholder="Enter your API key" oninput="updateLink()">
+        <button class="btn btn-primary" onclick="saveApiKey()">Save</button>
+    </div>
+</div>
+
+{% include 'includes/scripts.html' %}
+
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
+<script src="{{ url_for('static', filename='js/plugins/fileinput.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/plugins/select2.min.js') }}"></script>
+
+<script>
+    $(document).ready(function () {
+        $('.input_id').select2({
+            theme: 'bootstrap-5',
+        });
+
+        $('.input_preset').select2({
+            theme: 'bootstrap-5',
+        });
+    });
+</script>
+
+</body>
+</html>

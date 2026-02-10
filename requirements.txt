@@ -1,9 +1,71 @@
-# W&B and Weave
-wandb>=0.16.0
-weave>=0.50.0
+# Core scientific and computation libraries
+numpy==1.23.3
+scipy
 
-# LLM integration
-openai>=1.0.0
+# Audio processing
+librosa
+soundfile==0.12.1
+numba
+graiax-silkcoder[libsndfile]
 
-# Data processing
-pandas>=2.0.0
+# Natural Language Processing and Text Conversion
+unidecode
+pyopenjtalk-prebuilt
+jamo
+pypinyin
+pypinyin-dict
+jieba
+cn2an
+inflect
+eng_to_ipa
+ko_pron
+indic_transliteration
+num_thai
+opencc
+fasttext-wheel
+fastlid
+langid
+phonemizer==3.2.1
+transformers
+num2words
+mecab-python3
+unidic-lite
+g2p_en
+sentencepiece==0.1.99
+jaconv
+wordsegment
+pyjyutping
+g2pk2
+eunjeon; sys_platform == 'win32' # pip install eunjeon  -i https://pypi.artrajz.cn/simple/
+python_mecab_ko; sys_platform != 'win32'
+fugashi
+
+# Machine Learning and Deep Learning
+torch>=2.2.1
+onnx==1.12.0
+audonnx==0.7.0
+vector_quantize_pytorch==1.12.12
+pytorch_lightning
+torchmetrics
+
+# Web and API services
+flask==2.2.3
+flask_apscheduler
+pydantic==2.3.0
+werkzeug==2.3.6
+flask_login
+flask_wtf
+flask-cors
+ngrok
+requests_toolbelt
+
+# Compression and Decompression
+py7zr
+
+# Other utilities and dependencies
+MarkupSafe==2.1.2
+six==1.16.0
+protobuf==3.20.1
+tqdm
+PyYAML
+py-cpuinfo
