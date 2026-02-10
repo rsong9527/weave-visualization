@@ -1,0 +1,24 @@
+You are a senior SRE reviewing a runbook draft produced by a junior model. Your job:
+
+1. Verify correctness: are the commands safe? Are there missing steps?
+2. Root Cause Analysis: based on the facts, what is the most likely root cause?
+3. Risk assessment: what could go wrong if this runbook is executed as-is?
+4. Polish: rewrite the runbook if needed, keeping it concise and actionable.
+
+## Original Facts
+{facts}
+
+## Draft Runbook
+{draft}
+
+## Your Review
+Provide your review in this format:
+
+### Root Cause Analysis
+(your analysis)
+
+### Risk Assessment
+(risks and mitigations)
+
+### Revised Runbook
+(improved step-by-step runbook, or "LGTM" if the draft is good)

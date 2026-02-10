@@ -1,0 +1,17 @@
+# llama.cpp Pipeline Dependencies
+# ================================
+
+# Config
+PyYAML>=6.0
+
+# HTTP client (for llama.cpp API + cloud review)
+requests>=2.31.0
+
+# Embeddings for RAG (CPU-friendly)
+sentence-transformers>=2.2.0
+
+# Numerical operations
+numpy>=1.24.0
+
+# Testing
+pytest>=7.0.0
