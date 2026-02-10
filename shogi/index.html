@@ -483,13 +483,28 @@ body {
   <button class="btn" onclick="newGame()">新局 (New)</button>
   <button class="btn" onclick="undoPlayerMove()">待った (Undo)</button>
   <button class="btn" id="diffBtn1" onclick="setDifficulty(1)">初級</button>
-  <button class="btn" id="diffBtn2" onclick="setDifficulty(2)">中級</button>
-  <button class="btn active" id="diffBtn3" onclick="setDifficulty(3)">上級</button>
+  <button class="btn active" id="diffBtn2" onclick="setDifficulty(2)">中級</button>
+  <button class="btn" id="diffBtn3" onclick="setDifficulty(3)">上級</button>
 </div>
 
 <details class="history-panel">
   <summary>棋譜 (Move History)</summary>
   <div class="history-list" id="historyList"></div>
+</details>
+
+<details class="history-panel" style="margin-top: 4px;">
+  <summary>遊び方 (How to Play)</summary>
+  <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.7; margin-top: 8px; max-width: 600px;">
+    <p><strong>基本ルール：</strong>9×9の盤で対局します。相手の王（玉）を詰ませれば勝ちです。</p>
+    <p><strong>操作方法：</strong>駒をクリックして選択→移動先をクリック。持ち駒は右の持駒欄をクリックして空きマスに打てます。</p>
+    <p><strong>成り：</strong>敵陣（相手側3段）に入る/出る/動く時、駒を成ることができます。</p>
+    <p style="margin-top: 6px;">
+      <strong>駒の種類：</strong><br>
+      玉/王(King) ・ 飛→龍(Rook) ・ 角→馬(Bishop) ・ 金(Gold)<br>
+      銀→全(Silver) ・ 桂→圭(Knight) ・ 香→杏(Lance) ・ 歩→と(Pawn)
+    </p>
+    <p><strong>持ち駒：</strong>取った駒は持ち駒になり、自分の番に好きな空きマスに打てます。</p>
+  </div>
 </details>
 
 <div class="footer">
@@ -611,7 +626,7 @@ let selectedHand = null;    // {type, owner} or null
 let validMoves = [];        // [{row, col, promote?}]
 let lastMove = null;        // {fromR, fromC, toR, toC}
 let gameOver = false;
-let aiDifficulty = 3;       // 1=easy, 2=medium, 3=hard
+let aiDifficulty = 2;       // 1=easy, 2=medium, 3=hard
 let promotionResolve = null;
 
 // ============ INITIALIZATION ============
@@ -650,122 +665,6 @@ function initBoard() {
 }
 
 // ============ MOVE GENERATION ============
-function getMoves(row, col, forCheck) {
-  const piece = board[row][col];
-  if (!piece) return [];
-  const { type, owner, promoted } = piece;
-  const fwd = owner === SENTE ? -1 : 1;
-  const moves = [];
-
-  function addIfValid(r, c) {
-    if (r < 0 || r > 8 || c < 0 || c > 8) return false;
-    const target = board[r][c];
-    if (target && target.owner === owner) return false;
-    moves.push({ row: r, col: c });
-    return !target; // can continue sliding if empty
-  }
-
-  function addSteps(stepList) {
-    for (const [dr, dc] of stepList) {
-      const r = row + dr * fwd * (dr < 0 ? -1 : 1 ) ;
-      const c = col + dc;
-      // We need correct direction handling
-    }
-  }
-
-  // Get movement pattern based on piece type and promotion
-  if (promoted && type !== KING && type !== GOLD) {
-    if (type === ROOK) {
-      // Dragon: Rook slides + diagonal steps
-      for (const [dr, dc] of SLIDE_DIRS.R) {
-        for (let i = 1; i <= 8; i++) {
-          if (!addIfValid(row + dr * i, col + dc * i)) break;
-        }
-      }
-      // Diagonal steps
-      for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
-        addIfValid(row + dr, col + dc);
-      }
-    } else if (type === BISHOP) {
-      // Horse: Bishop slides + orthogonal steps
-      for (const [dr, dc] of SLIDE_DIRS.B) {
-        for (let i = 1; i <= 8; i++) {
-          if (!addIfValid(row + dr * i, col + dc * i)) break;
-        }
-      }
-      for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
-        addIfValid(row + dr, col + dc);
-      }
-    } else {
-      // Promoted S, N, L, P -> move like Gold
-      const goldMoves = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,0]];
-      for (const [dr, dc] of goldMoves) {
-        addIfValid(row + dr * fwd, col + dc);
-      }
-      // Fix: Gold forward/backward logic
-      // Gold: forward-left, forward, forward-right, left, right, backward
-      // In terms of fwd: [fwd, -1], [fwd, 0], [fwd, 1], [0, -1], [0, 1], [-fwd, 0]
-    }
-  } else {
-    // Non-promoted (or King/Gold)
-    switch (type) {
-      case KING:
-        for (const [dr, dc] of STEP_MOVES.K) {
-          addIfValid(row + dr, col + dc);
-        }
-        break;
-      case GOLD:
-        for (const [dr, dc] of STEP_MOVES.G) {
-          addIfValid(row + dr * fwd, col + dc);
-        }
-        break;
-      case SILVER:
-        for (const [dr, dc] of STEP_MOVES.S) {
-          addIfValid(row + dr * fwd, col + dc);
-        }
-        break;
-      case KNIGHT:
-        for (const [dr, dc] of STEP_MOVES.N) {
-          const r = row + dr * fwd;
-          const c = col + dc;
-          addIfValid(r, c);
-        }
-        break;
-      case PAWN:
-        addIfValid(row + fwd, col);
-        break;
-      case LANCE:
-        for (let i = 1; i <= 8; i++) {
-          if (!addIfValid(row + fwd * i, col)) break;
-        }
-        break;
-      case ROOK:
-        for (const [dr, dc] of SLIDE_DIRS.R) {
-          for (let i = 1; i <= 8; i++) {
-            if (!addIfValid(row + dr * i, col + dc * i)) break;
-          }
-        }
-        break;
-      case BISHOP:
-        for (const [dr, dc] of SLIDE_DIRS.B) {
-          for (let i = 1; i <= 8; i++) {
-            if (!addIfValid(row + dr * i, col + dc * i)) break;
-          }
-        }
-        break;
-    }
-  }
-
-  // Filter out moves that leave own king in check (unless we're checking for check)
-  if (!forCheck) {
-    return moves.filter(m => {
-      return !wouldLeaveInCheck(owner, row, col, m.row, m.col);
-    });
-  }
-  return moves;
-}
-
-// Fix promoted Gold-like moves properly
 function getMovesFixed(row, col, forCheck) {
   const piece = board[row][col];
   if (!piece) return [];
@@ -1026,35 +925,50 @@ function undoMove() {
 // ============ AI ============
 function evaluateBoard() {
   let score = 0;
+  let senteKingR = 4, senteKingC = 4, goteKingR = 4, goteKingC = 4;
+
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
       const p = board[r][c];
       if (!p) continue;
+
+      if (p.type === KING) {
+        if (p.owner === SENTE) { senteKingR = r; senteKingC = c; }
+        else { goteKingR = r; goteKingC = c; }
+      }
+
       let val = PIECE_VALUES[p.type];
       if (p.promoted && PROMOTED_BONUS[p.type]) val += PROMOTED_BONUS[p.type];
 
-      // Positional bonus: pieces closer to center and advanced are better
+      // Positional bonus: center control
       const centerDist = Math.abs(c - 4) + Math.abs(r - 4);
-      val += (8 - centerDist) * 0.05;
+      val += (8 - centerDist) * 0.03;
 
-      // Advancement bonus
-      if (p.owner === SENTE) {
-        val += (8 - r) * 0.02;
-      } else {
-        val += r * 0.02;
+      // Advancement bonus for non-king pieces
+      if (p.type !== KING) {
+        if (p.owner === SENTE) {
+          val += (8 - r) * 0.02;
+        } else {
+          val += r * 0.02;
+        }
       }
 
       score += p.owner === GOTE ? val : -val;
     }
   }
 
-  // Hand pieces
+  // Hand pieces (pieces in hand are very valuable - flexible deployment)
   for (const t of hands[GOTE]) {
-    score += PIECE_VALUES[t] * (HAND_BONUS[t] ? (1 + HAND_BONUS[t]) : 1);
+    score += PIECE_VALUES[t] * 1.1;
   }
   for (const t of hands[SENTE]) {
-    score -= PIECE_VALUES[t] * (HAND_BONUS[t] ? (1 + HAND_BONUS[t]) : 1);
+    score -= PIECE_VALUES[t] * 1.1;
   }
+
+  // King safety: penalize exposed kings
+  // Sente king should be near bottom, gote king near top
+  score -= (8 - senteKingR) * 0.1; // Sente king closer to row 8 = safer
+  score += goteKingR * 0.1;        // Gote king closer to row 0 = safer
 
   return score;
 }
@@ -1097,18 +1011,32 @@ function generateAllMoves(player) {
   return moves;
 }
 
+let aiNodeCount = 0;
+const AI_NODE_LIMIT = 80000;
+
 function minimax(depth, alpha, beta, maximizing) {
-  if (depth === 0) return evaluateBoard();
+  aiNodeCount++;
+  if (depth === 0 || aiNodeCount > AI_NODE_LIMIT) return evaluateBoard();
 
   const player = maximizing ? GOTE : SENTE;
   const moves = generateAllMoves(player);
 
   if (moves.length === 0) {
     if (isInCheck(player)) {
-      return maximizing ? -99999 + (aiDifficulty * 3 - depth) : 99999 - (aiDifficulty * 3 - depth);
+      return maximizing ? -99999 + (10 - depth) : 99999 - (10 - depth);
     }
     return 0; // stalemate
   }
+
+  // Move ordering: captures and promotions first for better pruning
+  moves.sort((a, b) => {
+    let sa = 0, sb = 0;
+    if (a.type === 'move' && board[a.toR][a.toC]) sa += PIECE_VALUES[board[a.toR][a.toC].type] * 10;
+    if (b.type === 'move' && board[b.toR][b.toC]) sb += PIECE_VALUES[board[b.toR][b.toC].type] * 10;
+    if (a.promote) sa += 5;
+    if (b.promote) sb += 5;
+    return sb - sa;
+  });
 
   if (maximizing) {
     let maxEval = -Infinity;
@@ -1139,26 +1067,26 @@ function getAIMove() {
   const moves = generateAllMoves(GOTE);
   if (moves.length === 0) return null;
 
-  const depth = aiDifficulty; // 1, 2, or 3
+  // Depth settings: Easy=1, Medium=2, Hard=3 (with node limit safety)
+  const depthMap = { 1: 1, 2: 2, 3: 3 };
+  const depth = depthMap[aiDifficulty];
 
-  // Easy: add randomness
-  if (aiDifficulty === 1) {
-    // 50% chance of random move
-    if (Math.random() < 0.4) {
-      return moves[Math.floor(Math.random() * moves.length)];
-    }
+  // Easy: 40% chance of random move
+  if (aiDifficulty === 1 && Math.random() < 0.4) {
+    return moves[Math.floor(Math.random() * moves.length)];
   }
 
   let bestMove = moves[0];
   let bestScore = -Infinity;
+  aiNodeCount = 0;
 
-  // Shuffle for variety
+  // Shuffle for variety when scores are equal
   for (let i = moves.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [moves[i], moves[j]] = [moves[j], moves[i]];
   }
 
-  // Order moves heuristically: captures first, then promotions
+  // Move ordering: captures and promotions first
   moves.sort((a, b) => {
     let sa = 0, sb = 0;
     if (a.type === 'move' && board[a.toR][a.toC]) sa += PIECE_VALUES[board[a.toR][a.toC].type] * 10;
@@ -1191,7 +1119,7 @@ function formatMove(move, player) {
     const kanji = getKanji(move.pieceType, player, false);
     return `${prefix}${files[move.toC]}${ranks[move.toR]}${kanji}打`;
   } else {
-    const piece = board[move.toR][move.toC] || board[move.fromR][move.fromC];
+    const piece = board[move.fromR][move.fromC];
     const kanji = getKanji(piece.type, player, false);
     let s = `${prefix}${files[move.toC]}${ranks[move.toR]}${kanji}`;
     if (move.promote) s += '成';
@@ -1349,6 +1277,7 @@ function handleCellClick(row, col) {
       const move = { type: 'drop', pieceType: selectedHand.type, owner: SENTE, toR: row, toC: col };
       const notation = formatMove(move, SENTE);
       makeMove(move);
+      playMoveSound(false);
       lastMove = { toR: row, toC: col };
       moveNotations.push(notation);
       selectedHand = null;
@@ -1412,9 +1341,11 @@ async function executeBoardMove(fromR, fromC, toR, toC) {
     promote = await askPromotion(piece.type);
   }
 
+  const isCapture = !!board[toR][toC];
   const move = { type: 'move', fromR, fromC, toR, toC, promote };
   const notation = formatMove(move, SENTE);
   makeMove(move);
+  playMoveSound(isCapture);
   lastMove = { fromR, fromC, toR, toC };
   moveNotations.push(notation);
   selectedCell = null;
@@ -1469,8 +1400,10 @@ function aiTurn() {
       return;
     }
 
+    const isCapture = move.type === 'move' && !!board[move.toR][move.toC];
     const notation = formatMove(move, GOTE);
     makeMove(move);
+    playMoveSound(isCapture);
 
     if (move.type === 'move') {
       lastMove = { fromR: move.fromR, fromC: move.fromC, toR: move.toR, toC: move.toC };
@@ -1557,6 +1490,35 @@ function renderCoordinates() {
   top.innerHTML = files.map(f => `<span>${f}</span>`).join('');
   left.innerHTML = ranks.map(r => `<span>${r}</span>`).join('');
   right.innerHTML = ranks.map(r => `<span>${r}</span>`).join('');
+}
+
+// ============ SOUND ============
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function playMoveSound(isCapture) {
+  try {
+    if (!audioCtx) audioCtx = new AudioCtx();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    if (isCapture) {
+      osc.frequency.value = 220;
+      osc.type = 'triangle';
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.15);
+    } else {
+      osc.frequency.value = 400;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + 0.08);
+    }
+  } catch(e) { /* audio not available */ }
 }
 
 // ============ START ============
