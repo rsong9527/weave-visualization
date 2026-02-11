@@ -7,3 +7,6 @@ openai>=1.0.0
 
 # Data processing
 pandas>=2.0.0
+
+# PDF generation (OCRKit spec)
+reportlab>=4.0.0

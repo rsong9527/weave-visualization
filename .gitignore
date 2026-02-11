@@ -26,3 +26,6 @@ wandb/
 .DS_Store
 Thumbs.db
 
+# Generated PDFs
+*.pdf
+
