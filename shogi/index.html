@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>将棋 - AI Teacher Shogi</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --board-bg: #c89648;
+  --board-border: #8B6914;
+  --cell-border: #a07830;
+  --piece-bg: #f5e6c8;
+  --piece-border: #8B7355;
+  --selected: rgba(255, 220, 50, 0.55);
+  --valid-move: rgba(80, 180, 80, 0.45);
+  --last-move: rgba(100, 160, 255, 0.3);
+  --check: rgba(255, 60, 60, 0.4);
+  --bg-dark: #1a1208;
+  --bg-panel: #2c1e10;
+  --text-light: #f0e6d2;
+  --text-muted: #b8a890;
+  --accent: #d4a853;
+  --hand-bg: #3a2a18;
+  --chat-bg: #231a0e;
+  --chat-ai: #3a2e1c;
+  --chat-user: #2a3a1c;
+  --chat-system: #2a2a30;
+}
+
+body {
+  font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'MS Mincho', 'Noto Serif JP', serif;
+  background: var(--bg-dark);
+  color: var(--text-light);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+}
+
+/* ============ HEADER ============ */
+.header {
+  text-align: center;
+  padding: 12px 20px 8px;
+  width: 100%;
+  background: linear-gradient(180deg, #2c1e10 0%, var(--bg-dark) 100%);
+  border-bottom: 1px solid #3a2a18;
+}
+.header h1 { font-size: 1.8rem; letter-spacing: 0.3em; color: var(--accent); text-shadow: 0 2px 8px rgba(0,0,0,0.5); }
+.header .subtitle { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; letter-spacing: 0.1em; }
+
+/* ============ MAIN LAYOUT ============ */
+.main-layout {
+  display: flex;
+  gap: 12px;
+  padding: 8px 12px;
+  max-width: 1100px;
+  width: 100%;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+.game-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ============ STATUS BAR ============ */
+.status-bar {
+  text-align: center;
+  padding: 6px 16px;
+  font-size: 0.95rem;
+  color: var(--text-light);
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.status-bar .turn-indicator {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+.status-bar.thinking .turn-indicator {
+  animation: pulse 0.8s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* ============ GAME CONTAINER ============ */
+.game-container {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ============ HAND ============ */
+.hand {
+  background: var(--hand-bg);
+  border: 2px solid #4a3a28;
+  border-radius: 6px;
+  padding: 6px 5px;
+  min-width: 52px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
+}
+.hand-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+  letter-spacing: 0.1em;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+}
+.hand-piece {
+  width: 38px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; cursor: pointer; position: relative;
+  background: var(--piece-bg); border: 1px solid var(--piece-border);
+  border-radius: 2px;
+  clip-path: polygon(10% 18%, 50% 0%, 90% 18%, 95% 100%, 5% 100%);
+  color: #1a1208; font-weight: bold;
+  transition: transform 0.1s; user-select: none;
+}
+.hand-piece:hover { transform: scale(1.08); }
+.hand-piece.selected { outline: 3px solid #ffcc00; outline-offset: 1px; transform: scale(1.1); }
+.hand-piece .count {
+  position: absolute; bottom: 1px; right: 3px;
+  font-size: 0.55rem; background: #c0392b; color: white;
+  border-radius: 50%; width: 14px; height: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: sans-serif; font-weight: bold;
+}
+.hand-piece.gote-piece { transform: rotate(180deg); }
+.hand-piece.gote-piece:hover { transform: rotate(180deg) scale(1.08); }
+
+/* ============ BOARD ============ */
+.board-wrapper { position: relative; flex-shrink: 0; }
+.board {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  width: min(52vw, 400px);
+  height: min(52vw, 400px);
+  background: var(--board-bg);
+  border: 3px solid var(--board-border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6), inset 0 0 30px rgba(0,0,0,0.08);
+}
+.cell {
+  border: 1px solid var(--cell-border);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; cursor: pointer;
+  transition: background 0.15s; z-index: 2;
+}
+.cell:hover { background: rgba(255,255,255,0.08); }
+.cell.selected { background: var(--selected); }
+.cell.valid-move { background: var(--valid-move); }
+.cell.valid-move::after {
+  content: ''; width: 30%; height: 30%;
+  background: rgba(0,100,0,0.5); border-radius: 50%; position: absolute;
+}
+.cell.valid-capture { background: var(--valid-move); }
+.cell.valid-capture::after {
+  content: ''; width: 80%; height: 80%;
+  border: 3px solid rgba(0,100,0,0.6); border-radius: 50%;
+  position: absolute; box-sizing: border-box;
+}
+.cell.last-move { background: var(--last-move); }
+.cell.in-check { background: var(--check); }
+
+.piece {
+  width: 84%; height: 88%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(0.8rem, 2.5vw, 1.2rem); font-weight: bold;
+  background: var(--piece-bg); border: 1px solid var(--piece-border);
+  clip-path: polygon(10% 18%, 50% 0%, 90% 18%, 95% 100%, 5% 100%);
+  color: #1a1208; user-select: none;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.1); z-index: 3; line-height: 1;
+}
+.piece.promoted { color: #b91c1c; }
+.piece.gote { transform: rotate(180deg); }
+
+.coords-top, .coords-bottom {
+  display: grid; grid-template-columns: repeat(9, 1fr);
+  width: min(52vw, 400px); text-align: center;
+  font-size: 0.6rem; color: var(--text-muted); padding: 1px 0; font-family: sans-serif;
+}
+.coords-left, .coords-right {
+  display: flex; flex-direction: column; justify-content: space-around;
+  height: min(52vw, 400px); text-align: center;
+  font-size: 0.6rem; color: var(--text-muted); padding: 0 3px;
+}
+
+/* ============ CONTROLS ============ */
+.controls {
+  display: flex; gap: 6px; padding: 8px 8px 4px; flex-wrap: wrap; justify-content: center;
+}
+.btn {
+  padding: 5px 12px; font-size: 0.75rem;
+  border: 1px solid var(--accent); background: transparent;
+  color: var(--accent); border-radius: 4px; cursor: pointer;
+  font-family: inherit; letter-spacing: 0.05em;
+  transition: background 0.2s, color 0.2s;
+}
+.btn:hover { background: var(--accent); color: var(--bg-dark); }
+.btn.active { background: var(--accent); color: var(--bg-dark); }
+
+/* ============ COMMENTARY PANEL ============ */
+.commentary-panel {
+  flex: 1;
+  min-width: 280px;
+  max-width: 420px;
+  background: var(--chat-bg);
+  border: 1px solid #3a2a18;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-height: calc(100vh - 120px);
+}
+.commentary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid #3a2a18;
+  flex-shrink: 0;
+}
+.commentary-header .title {
+  font-size: 0.95rem;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.commentary-header .title .dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #666;
+  transition: background 0.3s;
+}
+.commentary-header .title .dot.connected { background: #4caf50; box-shadow: 0 0 6px #4caf50; }
+.commentary-header .settings-btn {
+  background: none; border: 1px solid #5a4a38; color: var(--text-muted);
+  padding: 4px 10px; border-radius: 4px; cursor: pointer;
+  font-size: 0.75rem; font-family: inherit;
+  transition: background 0.2s, color 0.2s;
+}
+.commentary-header .settings-btn:hover { background: #5a4a38; color: var(--text-light); }
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 200px;
+  scroll-behavior: smooth;
+}
+.chat-messages::-webkit-scrollbar { width: 5px; }
+.chat-messages::-webkit-scrollbar-track { background: transparent; }
+.chat-messages::-webkit-scrollbar-thumb { background: #4a3a28; border-radius: 3px; }
+
+.chat-msg {
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.65;
+  max-width: 95%;
+  word-wrap: break-word;
+  font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.chat-msg.ai {
+  background: var(--chat-ai);
+  border: 1px solid #4a3e2c;
+  align-self: flex-start;
+  border-top-left-radius: 2px;
+  color: var(--text-light);
+}
+.chat-msg.ai .sender {
+  font-size: 0.7rem;
+  color: var(--accent);
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+.chat-msg.user {
+  background: var(--chat-user);
+  border: 1px solid #3a4a2c;
+  align-self: flex-end;
+  border-top-right-radius: 2px;
+  color: #d0e8c0;
+}
+.chat-msg.system {
+  background: var(--chat-system);
+  border: 1px solid #3a3a44;
+  align-self: center;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  padding: 8px 16px;
+}
+.chat-msg.move-info {
+  background: #2a2418;
+  border: 1px solid #4a3a28;
+  align-self: center;
+  text-align: center;
+  color: var(--accent);
+  font-size: 0.8rem;
+  padding: 4px 14px;
+  font-family: inherit;
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 10px 14px;
+  align-self: flex-start;
+}
+.typing-indicator span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent);
+  animation: typing 1.2s infinite;
+}
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typing {
+  0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+  30% { opacity: 1; transform: scale(1.1); }
+}
+
+.chat-input-area {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid #3a2a18;
+  background: var(--bg-panel);
+  flex-shrink: 0;
+}
+.chat-input {
+  flex: 1;
+  background: #1a1208;
+  border: 1px solid #4a3a28;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text-light);
+  font-size: 0.85rem;
+  font-family: -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  outline: none;
+}
+.chat-input:focus { border-color: var(--accent); }
+.chat-input::placeholder { color: #6a5a48; }
+.chat-send-btn {
+  padding: 8px 14px;
+  background: var(--accent);
+  color: var(--bg-dark);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: bold;
+  font-family: inherit;
+  transition: opacity 0.2s;
+}
+.chat-send-btn:hover { opacity: 0.85; }
+.chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ============ SETTINGS OVERLAY ============ */
+.settings-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+}
+.settings-overlay.active { display: flex; }
+.settings-modal {
+  background: var(--bg-panel);
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  padding: 24px 30px;
+  width: min(420px, 90vw);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+}
+.settings-modal h3 {
+  color: var(--accent);
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
+}
+.settings-group {
+  margin-bottom: 14px;
+}
+.settings-group label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.settings-group select,
+.settings-group input {
+  width: 100%;
+  padding: 8px 12px;
+  background: #1a1208;
+  border: 1px solid #4a3a28;
+  border-radius: 5px;
+  color: var(--text-light);
+  font-size: 0.85rem;
+  font-family: -apple-system, 'Segoe UI', sans-serif;
+  outline: none;
+}
+.settings-group select:focus,
+.settings-group input:focus { border-color: var(--accent); }
+.settings-group select { cursor: pointer; }
+.settings-group select option { background: #1a1208; }
+.settings-hint {
+  font-size: 0.7rem;
+  color: #6a5a48;
+  margin-top: 3px;
+}
+.settings-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+.settings-actions button {
+  padding: 8px 22px;
+  border-radius: 5px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+.settings-actions .save-btn {
+  background: var(--accent);
+  color: var(--bg-dark);
+  border: none;
+  font-weight: bold;
+}
+.settings-actions .save-btn:hover { opacity: 0.85; }
+.settings-actions .cancel-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid #4a3a28;
+}
+.settings-actions .cancel-btn:hover { background: #3a2a18; }
+
+/* ============ PROMOTION DIALOG ============ */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); z-index: 100;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(3px);
+}
+.overlay.active { display: flex; }
+.promo-dialog {
+  background: var(--bg-panel); border: 2px solid var(--accent);
+  border-radius: 10px; padding: 28px 36px; text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+}
+.promo-dialog h3 { margin-bottom: 18px; font-size: 1.15rem; color: var(--accent); letter-spacing: 0.15em; }
+.promo-buttons { display: flex; gap: 16px; justify-content: center; }
+.promo-btn {
+  padding: 12px 28px; font-size: 1.1rem;
+  border: 2px solid var(--accent); background: var(--bg-dark);
+  color: var(--text-light); border-radius: 6px; cursor: pointer;
+  font-family: inherit; transition: background 0.2s, transform 0.1s;
+}
+.promo-btn:hover { background: var(--accent); color: var(--bg-dark); transform: translateY(-2px); }
+
+/* ============ GAME OVER ============ */
+.game-over-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7); z-index: 200;
+  align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.game-over-overlay.active { display: flex; }
+.game-over-box {
+  background: var(--bg-panel); border: 2px solid var(--accent);
+  border-radius: 12px; padding: 36px 48px; text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+}
+.game-over-box h2 { font-size: 1.8rem; color: var(--accent); margin-bottom: 8px; letter-spacing: 0.2em; }
+.game-over-box p { font-size: 1rem; color: var(--text-muted); margin-bottom: 20px; }
+
+/* ============ HISTORY ============ */
+.history-panel { padding: 4px 12px; }
+.history-panel summary { cursor: pointer; color: var(--text-muted); font-size: 0.75rem; letter-spacing: 0.1em; }
+.history-list {
+  display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px;
+  font-size: 0.7rem; color: var(--text-muted); max-height: 80px;
+  overflow-y: auto; font-family: monospace;
+}
+.history-item { white-space: nowrap; }
+.history-item.sente { color: #e0c080; }
+.history-item.gote { color: #80b0e0; }
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 800px) {
+  .main-layout {
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 6px;
+  }
+  .commentary-panel {
+    max-width: 100%;
+    width: 100%;
+    max-height: 350px;
+    min-width: unset;
+  }
+  .board {
+    width: min(80vw, 400px);
+    height: min(80vw, 400px);
+  }
+  .coords-top, .coords-bottom { width: min(80vw, 400px); }
+  .coords-left, .coords-right { height: min(80vw, 400px); }
+}
+@media (max-width: 480px) {
+  .hand { min-width: 36px; padding: 4px 3px; }
+  .hand-piece { width: 30px; height: 34px; font-size: 0.8rem; }
+  .header h1 { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>将 棋</h1>
+  <div class="subtitle">AI Teacher Shogi &mdash; 边下边学</div>
+</div>
+
+<div class="main-layout">
+  <!-- LEFT: Game Area -->
+  <div class="game-area">
+    <div class="status-bar" id="statusBar">
+      <span class="turn-indicator"></span>
+      <span id="statusText">你的回合（先手）</span>
+    </div>
+
+    <div class="game-container">
+      <div class="hand" id="goteHand">
+        <span class="hand-label">後手持駒</span>
+      </div>
+      <div class="board-wrapper">
+        <div class="coords-top" id="coordsTop"></div>
+        <div style="display:flex;">
+          <div class="coords-left" id="coordsLeft"></div>
+          <div class="board" id="board"></div>
+          <div class="coords-right" id="coordsRight"></div>
+        </div>
+        <div class="coords-bottom" id="coordsBottom"></div>
+      </div>
+      <div class="hand" id="senteHand">
+        <span class="hand-label">先手持駒</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" onclick="newGame()">新局</button>
+      <button class="btn" onclick="undoPlayerMove()">悔棋</button>
+      <button class="btn" id="diffBtn1" onclick="setDifficulty(1)">初级</button>
+      <button class="btn active" id="diffBtn2" onclick="setDifficulty(2)">中级</button>
+      <button class="btn" id="diffBtn3" onclick="setDifficulty(3)">高级</button>
+    </div>
+
+    <details class="history-panel">
+      <summary>棋谱 (Move History)</summary>
+      <div class="history-list" id="historyList"></div>
+    </details>
+  </div>
+
+  <!-- RIGHT: Commentary Panel -->
+  <div class="commentary-panel">
+    <div class="commentary-header">
+      <div class="title">
+        <span class="dot" id="llmDot"></span>
+        AI 解说
+      </div>
+      <button class="settings-btn" onclick="openSettings()">设置 API</button>
+    </div>
+    <div class="chat-messages" id="chatMessages"></div>
+    <div class="chat-input-area">
+      <input type="text" class="chat-input" id="chatInput"
+             placeholder="向AI提问..." onkeydown="if(event.key==='Enter')sendUserQuestion()">
+      <button class="chat-send-btn" id="chatSendBtn" onclick="sendUserQuestion()">发送</button>
+    </div>
+  </div>
+</div>
+
+<!-- Promotion Dialog -->
+<div class="overlay" id="promoOverlay">
+  <div class="promo-dialog">
+    <h3>成りますか？（是否升变？）</h3>
+    <div class="promo-buttons">
+      <button class="promo-btn" onclick="resolvePromotion(true)">成る（升变）</button>
+      <button class="promo-btn" onclick="resolvePromotion(false)">不成（不变）</button>
+    </div>
+  </div>
+</div>
+
+<!-- Game Over -->
+<div class="game-over-overlay" id="gameOverOverlay">
+  <div class="game-over-box">
+    <h2 id="gameOverTitle"></h2>
+    <p id="gameOverMsg"></p>
+    <button class="btn" onclick="newGame()" style="font-size:1rem; padding: 10px 30px;">再来一局</button>
+  </div>
+</div>
+
+<!-- Settings -->
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-modal">
+    <h3>AI 解说设置</h3>
+    <div class="settings-group">
+      <label>API 服务商</label>
+      <select id="providerSelect" onchange="onProviderChange()">
+        <option value="openai">OpenAI</option>
+        <option value="deepseek">DeepSeek</option>
+        <option value="openrouter">OpenRouter</option>
+        <option value="custom">自定义 (Custom)</option>
+      </select>
+    </div>
+    <div class="settings-group">
+      <label>API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-...">
+      <div class="settings-hint">你的密钥仅保存在浏览器本地，不会上传到任何服务器</div>
+    </div>
+    <div class="settings-group">
+      <label>模型 (Model)</label>
+      <input type="text" id="modelInput" value="gpt-4o-mini">
+    </div>
+    <div class="settings-group" id="customUrlGroup" style="display:none;">
+      <label>API Base URL</label>
+      <input type="text" id="baseUrlInput" placeholder="https://api.example.com/v1">
+      <div class="settings-hint">使用 OpenAI 兼容的 /v1/chat/completions 接口</div>
+    </div>
+    <div class="settings-actions">
+      <button class="cancel-btn" onclick="closeSettings()">取消</button>
+      <button class="save-btn" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ================================================================
+//  SHOGI with LLM Commentary - Complete Implementation
+// ================================================================
+
+// ============ CONSTANTS ============
+const KING='K',ROOK='R',BISHOP='B',GOLD='G',SILVER='S',KNIGHT='N',LANCE='L',PAWN='P';
+const SENTE='sente',GOTE='gote';
+
+const PIECE_KANJI = {
+  K:{sente:'玉',gote:'王'}, R:{normal:'飛',promoted:'龍'},
+  B:{normal:'角',promoted:'馬'}, G:{normal:'金'},
+  S:{normal:'銀',promoted:'全'}, N:{normal:'桂',promoted:'圭'},
+  L:{normal:'香',promoted:'杏'}, P:{normal:'歩',promoted:'と'},
+};
+const PIECE_NAMES_CN = {
+  K:'王', R:'飞车', B:'角行', G:'金将', S:'银将', N:'桂马', L:'香车', P:'步兵'
+};
+const PROMOTED_NAMES_CN = {
+  R:'龙王', B:'龙马', S:'成银', N:'成桂', L:'成香', P:'と金(成步)'
+};
+
+function getKanji(type, owner, promoted) {
+  if (type === KING) return PIECE_KANJI.K[owner];
+  const info = PIECE_KANJI[type];
+  return (promoted && info.promoted) ? info.promoted : info.normal;
+}
+
+const PIECE_VALUES = { K:10000, R:10, B:9, G:6, S:5, N:4, L:3, P:1 };
+const PROMOTED_BONUS = { R:3, B:3, S:1, N:2, L:2, P:4 };
+
+function canPromote(type) { return type !== KING && type !== GOLD; }
+function mustPromote(type, owner, toRow) {
+  if (type===PAWN||type===LANCE) return (owner===SENTE&&toRow===0)||(owner===GOTE&&toRow===8);
+  if (type===KNIGHT) return (owner===SENTE&&toRow<=1)||(owner===GOTE&&toRow>=7);
+  return false;
+}
+function inPromotionZone(owner, row) {
+  return (owner===SENTE&&row<=2)||(owner===GOTE&&row>=6);
+}
+
+// ============ GAME STATE ============
+let board=[], hands={sente:[],gote:[]}, currentPlayer=SENTE;
+let moveHistory=[], moveNotations=[];
+let selectedCell=null, selectedHand=null, validMoves=[];
+let lastMove=null, gameOver=false, aiDifficulty=2, promotionResolve=null;
+
+function initBoard() {
+  board = Array.from({length:9}, ()=>Array(9).fill(null));
+  hands = {sente:[],gote:[]}; currentPlayer=SENTE;
+  moveHistory=[]; moveNotations=[];
+  selectedCell=null; selectedHand=null; validMoves=[];
+  lastMove=null; gameOver=false;
+  const back=[LANCE,KNIGHT,SILVER,GOLD,KING,GOLD,SILVER,KNIGHT,LANCE];
+  for(let c=0;c<9;c++){
+    board[0][c]={type:back[c],owner:GOTE,promoted:false};
+    board[8][c]={type:back[c],owner:SENTE,promoted:false};
+  }
+  board[1][1]={type:ROOK,owner:GOTE,promoted:false};
+  board[1][7]={type:BISHOP,owner:GOTE,promoted:false};
+  for(let c=0;c<9;c++){
+    board[2][c]={type:PAWN,owner:GOTE,promoted:false};
+    board[6][c]={type:PAWN,owner:SENTE,promoted:false};
+  }
+  board[7][7]={type:ROOK,owner:SENTE,promoted:false};
+  board[7][1]={type:BISHOP,owner:SENTE,promoted:false};
+}
+
+// ============ MOVE GENERATION ============
+function getValidMoves(row, col, forCheck) {
+  const piece=board[row][col];
+  if(!piece) return [];
+  const {type,owner,promoted}=piece;
+  const fwd=owner===SENTE?-1:1;
+  const moves=[];
+  function tryAdd(r,c){
+    if(r<0||r>8||c<0||c>8)return false;
+    const t=board[r][c];
+    if(t&&t.owner===owner)return false;
+    moves.push({row:r,col:c}); return !t;
+  }
+  function goldMoves(){
+    tryAdd(row+fwd,col-1);tryAdd(row+fwd,col);tryAdd(row+fwd,col+1);
+    tryAdd(row,col-1);tryAdd(row,col+1);tryAdd(row-fwd,col);
+  }
+  if(promoted&&type!==KING&&type!==GOLD){
+    if(type===ROOK){
+      for(const[dr,dc]of[[0,1],[0,-1],[1,0],[-1,0]])for(let i=1;i<=8;i++)if(!tryAdd(row+dr*i,col+dc*i))break;
+      for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]])tryAdd(row+dr,col+dc);
+    }else if(type===BISHOP){
+      for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]])for(let i=1;i<=8;i++)if(!tryAdd(row+dr*i,col+dc*i))break;
+      for(const[dr,dc]of[[0,1],[0,-1],[1,0],[-1,0]])tryAdd(row+dr,col+dc);
+    }else goldMoves();
+  }else{
+    switch(type){
+      case KING: for(const[dr,dc]of[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]])tryAdd(row+dr,col+dc);break;
+      case GOLD: goldMoves();break;
+      case SILVER: tryAdd(row+fwd,col-1);tryAdd(row+fwd,col);tryAdd(row+fwd,col+1);tryAdd(row-fwd,col-1);tryAdd(row-fwd,col+1);break;
+      case KNIGHT: tryAdd(row+2*fwd,col-1);tryAdd(row+2*fwd,col+1);break;
+      case PAWN: tryAdd(row+fwd,col);break;
+      case LANCE: for(let i=1;i<=8;i++)if(!tryAdd(row+fwd*i,col))break;break;
+      case ROOK: for(const[dr,dc]of[[0,1],[0,-1],[1,0],[-1,0]])for(let i=1;i<=8;i++)if(!tryAdd(row+dr*i,col+dc*i))break;break;
+      case BISHOP: for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]])for(let i=1;i<=8;i++)if(!tryAdd(row+dr*i,col+dc*i))break;break;
+    }
+  }
+  if(!forCheck) return moves.filter(m=>!wouldLeaveInCheck(owner,row,col,m.row,m.col));
+  return moves;
+}
+
+function getDropMoves(pieceType, owner) {
+  const drops=[];
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    if(board[r][c])continue;
+    if((pieceType===PAWN||pieceType===LANCE)&&((owner===SENTE&&r===0)||(owner===GOTE&&r===8)))continue;
+    if(pieceType===KNIGHT&&((owner===SENTE&&r<=1)||(owner===GOTE&&r>=7)))continue;
+    if(pieceType===PAWN){
+      let hasPawn=false;
+      for(let rr=0;rr<9;rr++){const p=board[rr][c];if(p&&p.type===PAWN&&p.owner===owner&&!p.promoted){hasPawn=true;break;}}
+      if(hasPawn)continue;
+      board[r][c]={type:PAWN,owner,promoted:false};
+      const opp=owner===SENTE?GOTE:SENTE;
+      if(isInCheck(opp)&&isCheckmate(opp)){board[r][c]=null;continue;}
+      board[r][c]=null;
+    }
+    drops.push({row:r,col:c});
+  }
+  return drops;
+}
+
+// ============ CHECK DETECTION ============
+function findKing(player){
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){const p=board[r][c];if(p&&p.type===KING&&p.owner===player)return{row:r,col:c};}
+  return null;
+}
+function isInCheck(player){
+  const king=findKing(player);if(!king)return false;
+  const opp=player===SENTE?GOTE:SENTE;
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const p=board[r][c];
+    if(p&&p.owner===opp&&getValidMoves(r,c,true).some(m=>m.row===king.row&&m.col===king.col))return true;
+  }
+  return false;
+}
+function wouldLeaveInCheck(player,fromR,fromC,toR,toC){
+  const cap=board[toR][toC],pc=board[fromR][fromC];
+  board[toR][toC]=pc;board[fromR][fromC]=null;
+  const chk=isInCheck(player);
+  board[fromR][fromC]=pc;board[toR][toC]=cap;
+  return chk;
+}
+function isCheckmate(player){
+  if(!isInCheck(player))return false;
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const p=board[r][c];if(p&&p.owner===player&&getValidMoves(r,c,false).length>0)return false;
+  }
+  for(const t of[...new Set(hands[player])])if(getDropMoves(t,player).length>0)return false;
+  return true;
+}
+function hasNoLegalMoves(player){
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const p=board[r][c];if(p&&p.owner===player&&getValidMoves(r,c,false).length>0)return false;
+  }
+  for(const t of[...new Set(hands[player])])if(getDropMoves(t,player).length>0)return false;
+  return true;
+}
+
+// ============ MAKE / UNDO MOVE ============
+function makeMove(move) {
+  if(move.type==='move'){
+    const piece=board[move.fromR][move.fromC];
+    move._captured=board[move.toR][move.toC];
+    move._wasPromoted=piece.promoted;
+    if(move._captured)hands[piece.owner].push(move._captured.type);
+    board[move.toR][move.toC]={type:piece.type,owner:piece.owner,promoted:move.promote?true:piece.promoted};
+    board[move.fromR][move.fromC]=null;
+  }else{
+    board[move.toR][move.toC]={type:move.pieceType,owner:move.owner,promoted:false};
+    const idx=hands[move.owner].indexOf(move.pieceType);
+    if(idx>=0)hands[move.owner].splice(idx,1);
+  }
+  currentPlayer=currentPlayer===SENTE?GOTE:SENTE;
+  moveHistory.push(move);
+}
+function undoMove(){
+  const move=moveHistory.pop();if(!move)return;
+  currentPlayer=currentPlayer===SENTE?GOTE:SENTE;
+  if(move.type==='move'){
+    const piece=board[move.toR][move.toC];
+    board[move.fromR][move.fromC]={type:piece.type,owner:piece.owner,promoted:move._wasPromoted};
+    board[move.toR][move.toC]=move._captured||null;
+    if(move._captured){const idx=hands[piece.owner].indexOf(move._captured.type);if(idx>=0)hands[piece.owner].splice(idx,1);}
+  }else{
+    hands[move.owner].push(move.pieceType);
+    board[move.toR][move.toC]=null;
+  }
+}
+
+// ============ AI ENGINE ============
+function evaluateBoard(){
+  let score=0, skR=4,skC=4,gkR=4,gkC=4;
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const p=board[r][c];if(!p)continue;
+    if(p.type===KING){if(p.owner===SENTE){skR=r;skC=c;}else{gkR=r;gkC=c;}}
+    let val=PIECE_VALUES[p.type];
+    if(p.promoted&&PROMOTED_BONUS[p.type])val+=PROMOTED_BONUS[p.type];
+    val+=(8-Math.abs(c-4)-Math.abs(r-4))*0.03;
+    if(p.type!==KING){if(p.owner===SENTE)val+=(8-r)*0.02;else val+=r*0.02;}
+    score+=p.owner===GOTE?val:-val;
+  }
+  for(const t of hands[GOTE])score+=PIECE_VALUES[t]*1.1;
+  for(const t of hands[SENTE])score-=PIECE_VALUES[t]*1.1;
+  score-=(8-skR)*0.1;score+=gkR*0.1;
+  return score;
+}
+
+function generateAllMoves(player){
+  const moves=[];
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const p=board[r][c];if(!p||p.owner!==player)continue;
+    for(const t of getValidMoves(r,c,false)){
+      const fz=inPromotionZone(player,r),tz=inPromotionZone(player,t.row);
+      const cp=canPromote(p.type)&&!p.promoted&&(fz||tz);
+      const mp=mustPromote(p.type,player,t.row);
+      if(mp)moves.push({type:'move',fromR:r,fromC:c,toR:t.row,toC:t.col,promote:true});
+      else if(cp){
+        moves.push({type:'move',fromR:r,fromC:c,toR:t.row,toC:t.col,promote:true});
+        moves.push({type:'move',fromR:r,fromC:c,toR:t.row,toC:t.col,promote:false});
+      }else moves.push({type:'move',fromR:r,fromC:c,toR:t.row,toC:t.col,promote:false});
+    }
+  }
+  for(const t of[...new Set(hands[player])])
+    for(const sq of getDropMoves(t,player))
+      moves.push({type:'drop',pieceType:t,owner:player,toR:sq.row,toC:sq.col});
+  return moves;
+}
+
+let aiNodeCount=0;const AI_NODE_LIMIT=80000;
+function minimax(depth,alpha,beta,maximizing){
+  aiNodeCount++;
+  if(depth===0||aiNodeCount>AI_NODE_LIMIT)return evaluateBoard();
+  const player=maximizing?GOTE:SENTE;
+  const moves=generateAllMoves(player);
+  if(moves.length===0){if(isInCheck(player))return maximizing?-99999+(10-depth):99999-(10-depth);return 0;}
+  moves.sort((a,b)=>{
+    let sa=0,sb=0;
+    if(a.type==='move'&&board[a.toR][a.toC])sa+=PIECE_VALUES[board[a.toR][a.toC].type]*10;
+    if(b.type==='move'&&board[b.toR][b.toC])sb+=PIECE_VALUES[board[b.toR][b.toC].type]*10;
+    if(a.promote)sa+=5;if(b.promote)sb+=5;return sb-sa;
+  });
+  if(maximizing){let mx=-Infinity;for(const m of moves){makeMove(m);const e=minimax(depth-1,alpha,beta,false);undoMove();mx=Math.max(mx,e);alpha=Math.max(alpha,e);if(beta<=alpha)break;}return mx;}
+  else{let mn=Infinity;for(const m of moves){makeMove(m);const e=minimax(depth-1,alpha,beta,true);undoMove();mn=Math.min(mn,e);beta=Math.min(beta,e);if(beta<=alpha)break;}return mn;}
+}
+
+function getAIMove(){
+  const moves=generateAllMoves(GOTE);if(moves.length===0)return null;
+  const depth=[0,1,2,3][aiDifficulty];
+  if(aiDifficulty===1&&Math.random()<0.4)return moves[Math.floor(Math.random()*moves.length)];
+  let best=moves[0],bestScore=-Infinity;aiNodeCount=0;
+  for(let i=moves.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[moves[i],moves[j]]=[moves[j],moves[i]];}
+  moves.sort((a,b)=>{
+    let sa=0,sb=0;
+    if(a.type==='move'&&board[a.toR][a.toC])sa+=PIECE_VALUES[board[a.toR][a.toC].type]*10;
+    if(b.type==='move'&&board[b.toR][b.toC])sb+=PIECE_VALUES[board[b.toR][b.toC].type]*10;
+    if(a.promote)sa+=5;if(b.promote)sb+=5;return sb-sa;
+  });
+  for(const m of moves){makeMove(m);const s=minimax(depth-1,-Infinity,Infinity,false);undoMove();if(s>bestScore){bestScore=s;best=m;}}
+  return best;
+}
+
+// ============ MOVE NOTATION ============
+function formatMove(move, player){
+  const files=['9','8','7','6','5','4','3','2','1'];
+  const ranks=['一','二','三','四','五','六','七','八','九'];
+  const prefix=player===SENTE?'☗':'☖';
+  if(move.type==='drop'){
+    return `${prefix}${files[move.toC]}${ranks[move.toR]}${getKanji(move.pieceType,player,false)}打`;
+  }else{
+    const piece=board[move.fromR][move.fromC];
+    let s=`${prefix}${files[move.toC]}${ranks[move.toR]}${getKanji(piece.type,player,false)}`;
+    if(move.promote)s+='成';return s;
+  }
+}
+
+function formatMoveForLLM(move, player) {
+  const files=['9','8','7','6','5','4','3','2','1'];
+  const ranks=['一','二','三','四','五','六','七','八','九'];
+  const side = player === SENTE ? '先手(你/学生)' : '后手(AI老师)';
+  if (move.type === 'drop') {
+    const pn = PIECE_NAMES_CN[move.pieceType];
+    return `${side} 打${pn}到${files[move.toC]}${ranks[move.toR]}`;
+  } else {
+    const piece = board[move.fromR] ? board[move.fromR][move.fromC] : null;
+    const pType = piece ? piece.type : (move._pieceType || '?');
+    const pn = piece?.promoted ? (PROMOTED_NAMES_CN[pType]||PIECE_NAMES_CN[pType]) : PIECE_NAMES_CN[pType];
+    const captured = move._captured;
+    let s = `${side} ${pn}从${files[move.fromC]}${ranks[move.fromR]}移动到${files[move.toC]}${ranks[move.toR]}`;
+    if (move.promote) s += '（升变）';
+    if (captured) {
+      const cn = captured.promoted ? (PROMOTED_NAMES_CN[captured.type]||PIECE_NAMES_CN[captured.type]) : PIECE_NAMES_CN[captured.type];
+      s += `，吃掉了对方的${cn}`;
+    }
+    return s;
+  }
+}
+
+// ============ BOARD STATE FOR LLM ============
+function formatBoardForLLM() {
+  const files = '９８７６５４３２１';
+  const ranks = ['一','二','三','四','五','六','七','八','九'];
+  let s = '当前盘面:\n';
+  s += '  ９ ８ ７ ６ ５ ４ ３ ２ １\n';
+  for (let r = 0; r < 9; r++) {
+    s += ranks[r] + ' ';
+    for (let c = 0; c < 9; c++) {
+      const p = board[r][c];
+      if (!p) { s += '__ '; }
+      else {
+        const mark = p.owner === SENTE ? '^' : 'v';
+        s += mark + getKanji(p.type, p.owner, p.promoted) + ' ';
+      }
+    }
+    s += '\n';
+  }
+  const fmtHand = (h) => {
+    if (h.length === 0) return '无';
+    const counts = {};
+    for (const t of h) counts[t] = (counts[t]||0)+1;
+    return Object.entries(counts).map(([t,n]) => PIECE_NAMES_CN[t] + (n>1?'x'+n:'')).join(' ');
+  };
+  s += '先手(学生)持驹: ' + fmtHand(hands.sente) + '\n';
+  s += '后手(AI老师)持驹: ' + fmtHand(hands.gote) + '\n';
+  if (isInCheck(SENTE)) s += '⚠ 先手被将军!\n';
+  if (isInCheck(GOTE)) s += '⚠ 后手被将军!\n';
+  return s;
+}
+
+// ============ LLM INTEGRATION ============
+const PROVIDERS = {
+  openai:    { baseUrl: 'https://api.openai.com/v1',      model: 'gpt-4o-mini' },
+  deepseek:  { baseUrl: 'https://api.deepseek.com',       model: 'deepseek-chat' },
+  openrouter:{ baseUrl: 'https://openrouter.ai/api/v1',   model: 'anthropic/claude-sonnet-4' },
+  custom:    { baseUrl: '',                                 model: '' },
+};
+
+let llmConfig = { provider:'openai', apiKey:'', model:'gpt-4o-mini', baseUrl:'https://api.openai.com/v1' };
+let llmConversation = [];
+let llmStreaming = false;
+let llmEnabled = false;
+
+const SYSTEM_PROMPT = `你是一位友善且经验丰富的将棋（日本象棋/Shogi）老师。你正在以后手与一位初学者学生对局。
+
+你的职责：
+1. 当你（后手AI）走棋后：简短解释你选择这步棋的原因和战略意图
+2. 当学生（先手）走棋后：评价这步棋的好坏，给出改进建议和下一步思路
+3. 学生提问时：耐心解答将棋规则、策略等问题
+
+风格要求：
+- 用中文回复，亲切友善，像朋友聊天
+- 每次回复2-4句话，简洁明了
+- 适合初学者理解，避免过于专业的术语
+- 偶尔穿插将棋小知识
+- 可以用emoji让对话更生动
+
+将棋基础知识备忘：
+- 9x9棋盘，先手(下方)和后手(上方)
+- 吃掉的棋子变为自己的"持驹"，可以在任意空格打入
+- 进入敌阵(对方3行)可以升变
+- 王(玉)被将死则输
+- 棋子：王(King)、飞车(Rook)→龙王、角行(Bishop)→龙马、金将、银将→成银、桂马→成桂、香车→成香、步兵→と金`;
+
+function loadLLMSettings() {
+  try {
+    const s = localStorage.getItem('shogi_llm_settings');
+    if (s) {
+      const cfg = JSON.parse(s);
+      llmConfig = { ...llmConfig, ...cfg };
+      llmEnabled = !!llmConfig.apiKey;
+    }
+  } catch(e) {}
+}
+
+function saveLLMSettings() {
+  try { localStorage.setItem('shogi_llm_settings', JSON.stringify(llmConfig)); } catch(e) {}
+}
+
+function openSettings() {
+  document.getElementById('providerSelect').value = llmConfig.provider;
+  document.getElementById('apiKeyInput').value = llmConfig.apiKey;
+  document.getElementById('modelInput').value = llmConfig.model;
+  document.getElementById('baseUrlInput').value = llmConfig.baseUrl;
+  document.getElementById('customUrlGroup').style.display = llmConfig.provider === 'custom' ? 'block' : 'none';
+  document.getElementById('settingsOverlay').classList.add('active');
+}
+
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('active');
+}
+
+function onProviderChange() {
+  const p = document.getElementById('providerSelect').value;
+  document.getElementById('customUrlGroup').style.display = p === 'custom' ? 'block' : 'none';
+  if (PROVIDERS[p]) {
+    document.getElementById('modelInput').value = PROVIDERS[p].model;
+    if (p !== 'custom') document.getElementById('baseUrlInput').value = PROVIDERS[p].baseUrl;
+  }
+}
+
+function saveSettings() {
+  const p = document.getElementById('providerSelect').value;
+  llmConfig.provider = p;
+  llmConfig.apiKey = document.getElementById('apiKeyInput').value.trim();
+  llmConfig.model = document.getElementById('modelInput').value.trim();
+  if (p === 'custom') {
+    llmConfig.baseUrl = document.getElementById('baseUrlInput').value.trim();
+  } else {
+    llmConfig.baseUrl = PROVIDERS[p].baseUrl;
+  }
+  llmEnabled = !!llmConfig.apiKey;
+  saveLLMSettings();
+  closeSettings();
+  updateLLMDot();
+  if (llmEnabled) {
+    addChatMsg('system', 'AI解说已连接！开始对局后，AI老师会分析每一步棋并给你建议。');
+  }
+}
+
+function updateLLMDot() {
+  const dot = document.getElementById('llmDot');
+  dot.classList.toggle('connected', llmEnabled);
+}
+
+// Chat message rendering
+function addChatMsg(role, content, cls) {
+  const container = document.getElementById('chatMessages');
+  const msg = document.createElement('div');
+  msg.className = `chat-msg ${cls || role}`;
+  if (role === 'ai') {
+    msg.innerHTML = `<div class="sender">🎓 AI老师</div><div class="content">${escapeHtml(content)}</div>`;
+  } else {
+    msg.textContent = content;
+  }
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+  return msg;
+}
+
+function addStreamingMsg() {
+  const container = document.getElementById('chatMessages');
+  const msg = document.createElement('div');
+  msg.className = 'chat-msg ai';
+  msg.id = 'streamingMsg';
+  msg.innerHTML = `<div class="sender">🎓 AI老师</div><div class="content" id="streamingContent"></div>`;
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+  return msg;
+}
+
+function addTypingIndicator() {
+  const container = document.getElementById('chatMessages');
+  const el = document.createElement('div');
+  el.className = 'typing-indicator';
+  el.id = 'typingIndicator';
+  el.innerHTML = '<span></span><span></span><span></span>';
+  container.appendChild(el);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeTypingIndicator() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+async function callLLM(userMsg) {
+  if (!llmEnabled || llmStreaming) return;
+
+  llmConversation.push({ role: 'user', content: userMsg });
+
+  // Keep conversation manageable (system + last 20 messages)
+  if (llmConversation.length > 24) {
+    llmConversation = llmConversation.slice(-20);
+  }
+
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    ...llmConversation
+  ];
+
+  llmStreaming = true;
+  addTypingIndicator();
+
+  try {
+    const url = llmConfig.baseUrl.replace(/\/+$/, '') + '/chat/completions';
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${llmConfig.apiKey}`
+    };
+    // OpenRouter needs extra headers
+    if (llmConfig.provider === 'openrouter') {
+      headers['HTTP-Referer'] = window.location.href;
+      headers['X-Title'] = 'Shogi AI Teacher';
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: llmConfig.model,
+        messages,
+        max_tokens: 400,
+        stream: true,
+        temperature: 0.8,
+      })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`API错误 (${response.status}): ${errText.slice(0, 200)}`);
+    }
+
+    removeTypingIndicator();
+    addStreamingMsg();
+    const contentEl = document.getElementById('streamingContent');
+    let fullContent = '';
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data: ')) continue;
+        const data = trimmed.slice(6);
+        if (data === '[DONE]') break;
+        try {
+          const json = JSON.parse(data);
+          const delta = json.choices?.[0]?.delta?.content;
+          if (delta) {
+            fullContent += delta;
+            contentEl.innerHTML = escapeHtml(fullContent);
+            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+          }
+        } catch(e) {}
+      }
+    }
+
+    llmConversation.push({ role: 'assistant', content: fullContent });
+
+    // Remove streaming msg ID so it becomes permanent
+    const streamMsg = document.getElementById('streamingMsg');
+    if (streamMsg) streamMsg.removeAttribute('id');
+    const streamContent = document.getElementById('streamingContent');
+    if (streamContent) streamContent.removeAttribute('id');
+
+  } catch(err) {
+    removeTypingIndicator();
+    // Try non-streaming fallback
+    try {
+      const url = llmConfig.baseUrl.replace(/\/+$/, '') + '/chat/completions';
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${llmConfig.apiKey}`
+      };
+      if (llmConfig.provider === 'openrouter') {
+        headers['HTTP-Referer'] = window.location.href;
+        headers['X-Title'] = 'Shogi AI Teacher';
+      }
+      const resp2 = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: llmConfig.model,
+          messages,
+          max_tokens: 400,
+          temperature: 0.8,
+        })
+      });
+      if (resp2.ok) {
+        const json = await resp2.json();
+        const content = json.choices?.[0]?.message?.content || '';
+        if (content) {
+          addChatMsg('ai', content);
+          llmConversation.push({ role: 'assistant', content });
+        }
+      } else {
+        addChatMsg('system', `API 调用失败: ${err.message}`);
+      }
+    } catch(e2) {
+      addChatMsg('system', `连接失败: ${err.message}。请检查API设置。`);
+    }
+  }
+
+  llmStreaming = false;
+}
+
+function requestCommentary(move, player) {
+  if (!llmEnabled) return;
+  const boardState = formatBoardForLLM();
+  const moveDesc = formatMoveForLLM(move, player);
+  const moveNum = moveNotations.length;
+  const side = player === SENTE ? '学生' : '你(AI老师)';
+
+  let prompt;
+  if (player === SENTE) {
+    prompt = `第${moveNum}手: ${moveDesc}\n\n${boardState}\n\n学生走了这步棋，请评价并给建议。`;
+  } else {
+    prompt = `第${moveNum}手: ${moveDesc}\n\n${boardState}\n\n这是你(AI老师/后手)走的棋，请解释你的意图。`;
+  }
+  callLLM(prompt);
+}
+
+async function sendUserQuestion() {
+  const input = document.getElementById('chatInput');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+
+  addChatMsg('user', q);
+
+  if (!llmEnabled) {
+    addChatMsg('system', '请先点击「设置 API」配置你的 API Key，就可以和AI老师对话了！');
+    return;
+  }
+
+  const boardState = formatBoardForLLM();
+  const prompt = `学生提问: "${q}"\n\n当前盘面:\n${boardState}\n\n请回答学生的问题。`;
+  await callLLM(prompt);
+}
+
+// ============ UI RENDERING ============
+const boardEl = document.getElementById('board');
+const senteHandEl = document.getElementById('senteHand');
+const goteHandEl = document.getElementById('goteHand');
+const statusText = document.getElementById('statusText');
+const statusBar = document.getElementById('statusBar');
+const historyList = document.getElementById('historyList');
+const promoOverlay = document.getElementById('promoOverlay');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+
+function render(){ renderBoard(); renderHands(); renderStatus(); }
+
+function renderBoard(){
+  boardEl.innerHTML='';
+  const kingPos=findKing(currentPlayer);
+  const inCheck=isInCheck(currentPlayer);
+  for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    const cell=document.createElement('div');
+    cell.className='cell';
+    if(lastMove&&((r===lastMove.toR&&c===lastMove.toC)||(lastMove.fromR!==undefined&&r===lastMove.fromR&&c===lastMove.fromC)))cell.classList.add('last-move');
+    if(inCheck&&kingPos&&r===kingPos.row&&c===kingPos.col)cell.classList.add('in-check');
+    if(selectedCell&&r===selectedCell.row&&c===selectedCell.col)cell.classList.add('selected');
+    if(validMoves.find(m=>m.row===r&&m.col===c)){cell.classList.add(board[r][c]?'valid-capture':'valid-move');}
+    const p=board[r][c];
+    if(p){
+      const pe=document.createElement('div');pe.className='piece';
+      if(p.owner===GOTE)pe.classList.add('gote');
+      if(p.promoted)pe.classList.add('promoted');
+      pe.textContent=getKanji(p.type,p.owner,p.promoted);
+      cell.appendChild(pe);
+    }
+    cell.addEventListener('click',()=>handleCellClick(r,c));
+    boardEl.appendChild(cell);
+  }
+}
+
+function renderHands(){ renderHand(senteHandEl,SENTE); renderHand(goteHandEl,GOTE); }
+function renderHand(container,owner){
+  const label=container.querySelector('.hand-label');container.innerHTML='';container.appendChild(label);
+  const hand=hands[owner],counts={};
+  for(const t of hand)counts[t]=(counts[t]||0)+1;
+  for(const t of[ROOK,BISHOP,GOLD,SILVER,KNIGHT,LANCE,PAWN]){
+    if(!counts[t])continue;
+    const el=document.createElement('div');el.className='hand-piece';
+    if(owner===GOTE)el.classList.add('gote-piece');
+    if(selectedHand&&selectedHand.type===t&&selectedHand.owner===owner)el.classList.add('selected');
+    el.textContent=getKanji(t,owner,false);
+    if(counts[t]>1){const ce=document.createElement('span');ce.className='count';ce.textContent=counts[t];el.appendChild(ce);}
+    el.addEventListener('click',e=>{e.stopPropagation();handleHandClick(t,owner);});
+    container.appendChild(el);
+  }
+}
+
+function renderStatus(){
+  if(gameOver)return;
+  if(currentPlayer===SENTE){statusText.textContent='你的回合（先手）';statusBar.classList.remove('thinking');}
+  else{statusText.textContent='AI思考中...（后手）';statusBar.classList.add('thinking');}
+}
+
+function renderHistory(){
+  historyList.innerHTML='';
+  for(let i=0;i<moveNotations.length;i++){
+    const el=document.createElement('span');
+    el.className='history-item '+(i%2===0?'sente':'gote');
+    el.textContent=`${i+1}. ${moveNotations[i]}`;
+    historyList.appendChild(el);
+  }
+  historyList.scrollTop=historyList.scrollHeight;
+}
+
+// ============ EVENT HANDLERS ============
+function handleCellClick(row, col) {
+  if(gameOver||currentPlayer!==SENTE)return;
+  if(selectedHand){
+    if(validMoves.find(m=>m.row===row&&m.col===col)){
+      const move={type:'drop',pieceType:selectedHand.type,owner:SENTE,toR:row,toC:col};
+      const notation=formatMove(move,SENTE);
+      addChatMsg('move-info', `📋 ${notation}`);
+      makeMove(move);
+      playMoveSound(false);
+      lastMove={toR:row,toC:col};
+      moveNotations.push(notation);
+      // Store info for LLM before clearing
+      const moveCopy = {...move};
+      selectedHand=null;validMoves=[];
+      render();renderHistory();
+      requestCommentary(moveCopy, SENTE);
+      checkGameEnd();
+      if(!gameOver)setTimeout(aiTurn,400);
+      return;
+    }
+    selectedHand=null;validMoves=[];
+  }
+  const piece=board[row][col];
+  if(selectedCell){
+    if(validMoves.find(m=>m.row===row&&m.col===col)){
+      executeBoardMove(selectedCell.row,selectedCell.col,row,col);return;
+    }
+    if(piece&&piece.owner===SENTE){
+      selectedCell={row,col};selectedHand=null;
+      validMoves=getValidMoves(row,col,false);render();return;
+    }
+    selectedCell=null;validMoves=[];render();return;
+  }
+  if(piece&&piece.owner===SENTE){
+    selectedCell={row,col};selectedHand=null;
+    validMoves=getValidMoves(row,col,false);render();
+  }
+}
+
+async function executeBoardMove(fromR,fromC,toR,toC){
+  const piece=board[fromR][fromC];
+  const fz=inPromotionZone(SENTE,fromR),tz=inPromotionZone(SENTE,toR);
+  const cp=canPromote(piece.type)&&!piece.promoted&&(fz||tz);
+  const mp=mustPromote(piece.type,SENTE,toR);
+  let promote=false;
+  if(mp)promote=true;
+  else if(cp)promote=await askPromotion();
+
+  const isCapture=!!board[toR][toC];
+  const move={type:'move',fromR,fromC,toR,toC,promote,_pieceType:piece.type};
+  const notation=formatMove(move,SENTE);
+  addChatMsg('move-info', `📋 ${notation}`);
+  makeMove(move);
+  playMoveSound(isCapture);
+  lastMove={fromR,fromC,toR,toC};
+  moveNotations.push(notation);
+
+  // Store captured info for LLM
+  const moveCopy = {...move, _captured: move._captured};
+  selectedCell=null;validMoves=[];
+  render();renderHistory();
+  requestCommentary(moveCopy, SENTE);
+  checkGameEnd();
+  if(!gameOver)setTimeout(aiTurn,400);
+}
+
+function handleHandClick(type,owner){
+  if(gameOver||currentPlayer!==SENTE||owner!==SENTE)return;
+  if(selectedHand&&selectedHand.type===type&&selectedHand.owner===owner){selectedHand=null;validMoves=[];render();return;}
+  selectedCell=null;selectedHand={type,owner};
+  validMoves=getDropMoves(type,SENTE);render();
+}
+
+function askPromotion(){
+  return new Promise(resolve=>{promoOverlay.classList.add('active');promotionResolve=resolve;});
+}
+function resolvePromotion(choice){
+  promoOverlay.classList.remove('active');
+  if(promotionResolve){promotionResolve(choice);promotionResolve=null;}
+}
+
+// ============ AI TURN ============
+function aiTurn(){
+  if(gameOver||currentPlayer!==GOTE)return;
+  render();
+  setTimeout(()=>{
+    const move=getAIMove();
+    if(!move){showGameOver('你赢了！','AI没有可走的棋步。');return;}
+    const isCapture=move.type==='move'&&!!board[move.toR][move.toC];
+    move._pieceType = move.type === 'move' ? board[move.fromR][move.fromC]?.type : move.pieceType;
+    const notation=formatMove(move,GOTE);
+    addChatMsg('move-info', `📋 ${notation}`);
+    makeMove(move);
+    playMoveSound(isCapture);
+    if(move.type==='move')lastMove={fromR:move.fromR,fromC:move.fromC,toR:move.toR,toC:move.toC};
+    else lastMove={toR:move.toR,toC:move.toC};
+    moveNotations.push(notation);
+    const moveCopy = {...move, _captured: move._captured};
+    render();renderHistory();
+    requestCommentary(moveCopy, GOTE);
+    checkGameEnd();
+  },150);
+}
+
+// ============ GAME END ============
+function checkGameEnd(){
+  if(isCheckmate(SENTE)){showGameOver('你输了','AI将杀了你的王！');gameOver=true;return;}
+  if(isCheckmate(GOTE)){showGameOver('你赢了！','恭喜！你将杀了AI的王！');gameOver=true;return;}
+  if(hasNoLegalMoves(currentPlayer)){
+    if(currentPlayer===SENTE)showGameOver('你输了','没有可走的棋步。');
+    else showGameOver('你赢了！','AI没有可走的棋步。');
+    gameOver=true;
+  }
+}
+function showGameOver(title,msg){
+  gameOver=true;
+  document.getElementById('gameOverTitle').textContent=title;
+  document.getElementById('gameOverMsg').textContent=msg;
+  gameOverOverlay.classList.add('active');
+  if(llmEnabled) callLLM(`对局结束！${title} ${msg} 请总结这局棋，给学生一些鼓励和建议。`);
+}
+
+// ============ CONTROLS ============
+function newGame(){
+  gameOverOverlay.classList.remove('active');
+  promoOverlay.classList.remove('active');
+  initBoard();render();renderHistory();
+  llmConversation = [];
+  const chatEl = document.getElementById('chatMessages');
+  chatEl.innerHTML = '';
+  if (llmEnabled) {
+    addChatMsg('system', '新对局开始！你执先手（下方），AI老师执后手（上方）。');
+    callLLM('新对局开始了！我是初学者，请简短介绍一下将棋的开局建议（1-2句话即可），然后我们开始下棋吧！');
+  } else {
+    addChatMsg('system', '欢迎来到将棋！点击右上角「设置 API」配置你的 LLM API Key，AI老师就会一边和你下棋一边教你。');
+    addChatMsg('system', '支持 OpenAI、DeepSeek、OpenRouter 等服务商。即使不配置API，也可以和内置AI引擎对局。');
+  }
+}
+
+function undoPlayerMove(){
+  if(gameOver||moveHistory.length<2)return;
+  undoMove();moveNotations.pop();
+  undoMove();moveNotations.pop();
+  selectedCell=null;selectedHand=null;validMoves=[];
+  lastMove=moveHistory.length>0?moveHistory[moveHistory.length-1]:null;
+  render();renderHistory();
+  if(llmEnabled) addChatMsg('system', '已悔棋，回到上一步。');
+}
+
+function setDifficulty(level){
+  aiDifficulty=level;
+  document.querySelectorAll('.controls .btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('diffBtn'+level).classList.add('active');
+}
+
+function renderCoordinates(){
+  const files=['9','8','7','6','5','4','3','2','1'];
+  const ranks=['一','二','三','四','五','六','七','八','九'];
+  document.getElementById('coordsTop').innerHTML=files.map(f=>`<span>${f}</span>`).join('');
+  document.getElementById('coordsLeft').innerHTML=ranks.map(r=>`<span>${r}</span>`).join('');
+  document.getElementById('coordsRight').innerHTML=ranks.map(r=>`<span>${r}</span>`).join('');
+}
+
+// ============ SOUND ============
+const AudioCtx=window.AudioContext||window.webkitAudioContext;
+let audioCtx=null;
+function playMoveSound(isCapture){
+  try{
+    if(!audioCtx)audioCtx=new AudioCtx();
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.connect(g);g.connect(audioCtx.destination);
+    if(isCapture){o.frequency.value=220;o.type='triangle';g.gain.setValueAtTime(0.15,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.15);o.start(audioCtx.currentTime);o.stop(audioCtx.currentTime+0.15);}
+    else{o.frequency.value=400;o.type='sine';g.gain.setValueAtTime(0.08,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.08);o.start(audioCtx.currentTime);o.stop(audioCtx.currentTime+0.08);}
+  }catch(e){}
+}
+
+// ============ START ============
+loadLLMSettings();
+updateLLMDot();
+renderCoordinates();
+initBoard();
+render();
+
+// Welcome messages
+if (llmEnabled) {
+  addChatMsg('system', '你执先手（下方），AI老师执后手（上方）。开始吧！');
+  callLLM('新对局开始了！我是初学者，请简短介绍一下将棋开局的一两个要点，然后我们开始下棋！');
+} else {
+  addChatMsg('system', '欢迎来到将棋！🎮');
+  addChatMsg('system', '点击「设置 API」配置 LLM API Key，AI老师就会一边和你下棋一边讲解每一步的思路，教你怎么下。');
+  addChatMsg('system', '支持 OpenAI、DeepSeek、OpenRouter 等。不配置也可以正常下棋哦！');
+}
+</script>
+</body>
+</html>
