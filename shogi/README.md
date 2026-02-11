@@ -1,37 +1,69 @@
-# 将棋 - Shogi (Japanese Chess)
+# 将棋 AI 老师 - Shogi AI Teacher
 
-A complete browser-based Shogi game with AI opponent, built as a single HTML file with no dependencies.
+一个带有 LLM 解说的将棋（日本象棋）Web 应用。AI 老师会一边和你下棋，一边讲解每一步的思路、策略，帮你学习将棋。
 
-## How to Play
+## 功能特色
 
-Simply open `index.html` in any modern web browser. No server or installation required.
+### AI 解说 (LLM 驱动)
+- **实时解说**：AI 老师会分析你和对手的每一步棋
+- **策略讲解**：解释每步棋背后的意图和战略
+- **教学建议**：针对你的走法给出改进建议
+- **互动问答**：随时向 AI 老师提问将棋规则和策略
+- **流式输出**：实时显示 AI 回复，体验流畅
 
-## Features
+### 支持的 API 服务商
+- **OpenAI** (GPT-4o-mini 等)
+- **DeepSeek** (deepseek-chat)
+- **OpenRouter** (Claude, GPT-4 等多种模型)
+- **自定义** (任何 OpenAI 兼容的 API)
 
-- **Full Shogi rules**: All piece types with correct movement, promotion, captured piece drops, check/checkmate detection
-- **AI opponent**: Three difficulty levels (初級/中級/上級) with minimax + alpha-beta pruning
-- **Traditional styling**: Wood-themed board with authentic kanji piece characters (玉/飛/角/金/銀/桂/香/歩)
-- **Sound effects**: Subtle audio feedback for moves and captures
-- **Move history**: Japanese notation (棋譜) with ☗/☖ markers
-- **Undo support**: Take back moves (待った)
-- **Responsive design**: Works on desktop and mobile
-- **Promotion dialog**: Choose whether to promote pieces (成る/不成)
+### 完整将棋规则
+- 9×9 棋盘，传统日式木纹风格
+- 全部棋子类型及正确走法 (玉/飛/角/金/銀/桂/香/歩)
+- 升变系统（进入敌阵可升变）
+- 持驹打入（吃掉的棋子可以重新放回棋盘）
+- 将军/将杀检测
+- 二步/打步诘等特殊规则
 
-## Piece Guide
+### 游戏功能
+- 三个难度等级（初级/中级/高级）
+- 悔棋支持
+- 棋谱记录（日式记法）
+- 音效反馈
+- 响应式设计（桌面端+手机端）
 
-| Piece | Kanji | Promoted | Movement |
-|-------|-------|----------|----------|
-| King | 玉/王 | - | One step any direction |
-| Rook | 飛 | 龍 (Dragon) | Slides orthogonally (+diagonal step when promoted) |
-| Bishop | 角 | 馬 (Horse) | Slides diagonally (+orthogonal step when promoted) |
-| Gold | 金 | - | One step forward/sideways/backward |
-| Silver | 銀 | 全 | One step forward/diagonally |
-| Knight | 桂 | 圭 | L-shape forward only |
-| Lance | 香 | 杏 | Slides forward only |
-| Pawn | 歩 | と (Tokin) | One step forward |
+## 快速开始
 
-## Controls
+1. 用浏览器打开 `index.html`
+2. 点击右上角「设置 API」配置你的 API Key
+3. 开始下棋！AI 老师会自动解说
 
-- **新局 (New)**: Start a new game
-- **待った (Undo)**: Take back your last move
-- **初級/中級/上級**: Set AI difficulty
+> 即使不配置 API，也可以和内置 AI 引擎正常对局，只是没有解说功能。
+
+## 棋子一览
+
+| 棋子 | 日文 | 升变后 | 走法 |
+|------|------|--------|------|
+| 王将 | 玉/王 | - | 八方各一步 |
+| 飞车 | 飛 | 龍（龙王）| 直线滑动（+升变后可斜走一步）|
+| 角行 | 角 | 馬（龙马）| 斜线滑动（+升变后可直走一步）|
+| 金将 | 金 | - | 前方三格+左右+后方一步 |
+| 银将 | 銀 | 全（成银）| 前方三格+斜后方 |
+| 桂马 | 桂 | 圭（成桂）| L形前跳（类似国际象棋马但只能向前）|
+| 香车 | 香 | 杏（成香）| 前方直线滑动 |
+| 步兵 | 歩 | と（と金）| 前进一步 |
+
+## 操作说明
+
+- **走棋**：点击己方棋子选中 → 点击目标格移动
+- **打入持驹**：点击右侧持驹栏选中 → 点击空格打入
+- **提问**：在右侧评论区输入框输入问题并发送
+- **悔棋**：点击「悔棋」按钮
+- **新局**：点击「新局」按钮
+
+## 技术实现
+
+- 纯前端实现，单个 HTML 文件，无需安装
+- 将棋引擎：Minimax + Alpha-Beta 剪枝
+- LLM 集成：OpenAI 兼容 API，支持 SSE 流式输出
+- API Key 仅保存在浏览器 localStorage，不上传到任何服务器
