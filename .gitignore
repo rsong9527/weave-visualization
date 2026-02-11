@@ -26,6 +26,10 @@ wandb/
 .DS_Store
 Thumbs.db
 
-# Generated PDFs
+# Generated files
 *.pdf
+tests/test_output.json
+tests/test_annotated.png
+ocrkit_output.json
+OCRKit_MVP_Spec.pdf
 

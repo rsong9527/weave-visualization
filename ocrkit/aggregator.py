@@ -264,18 +264,24 @@ def _classify_block(block: UIBlock, median_height: float, image_width: int) -> U
             return block
 
     # --- Label+Value: matches "Label: Value" pattern ---
-    if line_count == 1:
+    # Check each line individually in multi-line blocks too
+    for line in block.lines:
+        lt = line.text.strip()
         for pattern in _LABEL_VALUE_PATTERNS:
-            match = pattern.match(text)
+            match = pattern.match(lt)
             if match:
                 label_part = match.group(1).strip()
                 value_part = match.group(2).strip()
-                # Heuristic: label should be short-ish
                 if len(label_part.split()) <= 5:
-                    block.block_type = "label_value"
-                    block.label = label_part
-                    block.value = value_part
-                    return block
+                    # If block is single-line, classify the whole block
+                    if line_count == 1:
+                        block.block_type = "label_value"
+                        block.label = label_part
+                        block.value = value_part
+                        return block
+                    # Multi-line block with label:value → keep as text
+                    # (will be handled by split logic)
+                    break
 
     # --- List item: starts with bullet/number ---
     if line_count == 1 and re.match(r"^(\d+[.)]\s|[-•*]\s)", text):
@@ -295,6 +301,29 @@ def _classify_block(block: UIBlock, median_height: float, image_width: int) -> U
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
+def _split_block_by_type(block: UIBlock, median_height: float, image_width: int) -> list[UIBlock]:
+    """Post-classification: split multi-line blocks that contain mixed types.
+
+    For example, a block with a heading line followed by body text should be
+    split into separate heading and text blocks.
+    """
+    if len(block.lines) <= 1:
+        return [block]
+
+    # Check if first line is significantly taller (heading candidate)
+    first_h = block.lines[0].avg_word_height
+    rest_h = sum(l.avg_word_height for l in block.lines[1:]) / len(block.lines[1:])
+
+    if first_h > rest_h * 1.25 and len(block.lines[0].words) <= 6:
+        # Split: first line becomes heading, rest stays
+        heading = UIBlock(lines=[block.lines[0]], block_type="heading")
+        remainder = UIBlock(lines=block.lines[1:])
+        remainder = _classify_block(remainder, median_height, image_width)
+        return [heading, remainder]
+
+    return [block]
+
 
 def aggregate(
     words: list[OCRWord],
@@ -341,4 +370,9 @@ def aggregate(
     # Step 3: Classify each block
     classified = [_classify_block(b, median_height, image_width) for b in blocks]
 
-    return classified
+    # Step 4: Post-process — split blocks that contain mixed types
+    final: list[UIBlock] = []
+    for block in classified:
+        final.extend(_split_block_by_type(block, median_height, image_width))
+
+    return final
